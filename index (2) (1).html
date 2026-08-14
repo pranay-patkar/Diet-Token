@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overview Analytics & Funnel Telemetry Platform</title>
+
+    <!-- Tailwind CSS with custom theme token extensions -->
+    <script>
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dash: {
+                            bg: '#08080A',
+                            sidebar: '#0D0D11',
+                            card: '#121216',
+                            hover: '#181820',
+                            border: '#1E1E26',
+                            subtle: '#2A2A36',
+                            text: '#EDEDF0',
+                            muted: '#8A8A9E',
+                            accent: '#FFFFFF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chart.js and Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <style>
+        body {
+            background-color: #08080A;
+            color: #EDEDF0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .dash-card {
+            background-color: #121216;
+            border: 1px solid #1E1E26;
+            border-radius: 12px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .dash-card:hover {
+            border-color: #2E2E3D;
+        }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #08080A;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1E1E26;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #323242;
+        }
+
+        /* Dotted Track Progress Lines */
+        .dotted-track {
+            background-image: radial-gradient(circle, #3A3A4C 1px, transparent 1px);
+            background-size: 6px 6px;
+            background-repeat: repeat-x;
+            background-position: center;
+        }
+
+        /* Funnel SVG dynamic hover glow */
+        .funnel-stage {
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            cursor: pointer;
+        }
+        .funnel-stage:hover {
+            opacity: 0.95;
+            filter: brightness(1.2);
+        }
+
+        /* Heatmap Grid Cell */
+        .heatmap-cell {
+            transition: transform 0.15s ease, outline 0.15s ease;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.25);
+            z-index: 20;
+            outline: 1px solid #FFFFFF;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex text-sm antialiased selection:bg-white selection:text-black">
+
+    <aside class="w-16 bg-[#0D0D11] border-r border-[#1E1E26] flex flex-col items-center justify-between py-4 shrink-0 z-40">
+        
+        <!-- Top Logo & Core Navigation Icons -->
+        <div class="flex flex-col items-center space-y-6 w-full">
+            <div class="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg shadow-lg cursor-pointer" onclick="switchMainTab('overview')">
+                <i data-lucide="layout-grid" class="w-5 h-5 text-black"></i>
+            </div>
+
+            <nav class="flex flex-col space-y-2 w-full px-2">
+                <button onclick="switchMainTab('overview')" id="sidebar-overview" class="side-nav-btn active-side p-2.5 rounded-xl bg-white/10 text-white flex items-center justify-center transition-all group relative">
+                    <i data-lucide="grid" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Overview</span>
+                </button>
+                <button onclick="switchMainTab('analytics')" id="sidebar-analytics" class="side-nav-btn p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="line-chart" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Analytics</span>
+                </button>
+                <button onclick="switchMainTab('database')" id="sidebar-database" class="side-nav-btn p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="database" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Database</span>
+                </button>
+                <button onclick="switchMainTab('ecommerce')" id="sidebar-ecommerce" class="side-nav-btn p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Orders</span>
+                </button>
+                <button onclick="switchMainTab('content')" id="sidebar-content" class="side-nav-btn p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Content</span>
+                </button>
+                <button onclick="switchMainTab('users')" id="sidebar-users" class="side-nav-btn p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Team</span>
+                </button>
+                <button onclick="switchMainTab('marketing')" id="sidebar-marketing" class="side-nav-btn p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="megaphone" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Campaigns</span>
+                </button>
+                <button onclick="openModal('Workspace Settings')" class="p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="plug" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Plugins</span>
+                </button>
+                <button onclick="openModal('API Keys & Guardrails')" class="p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="key" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">API Keys</span>
+                </button>
+                <button onclick="switchMainTab('analytics')" class="p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="activity" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Live Activity</span>
+                </button>
+                <button onclick="openCommandPalette()" class="p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="terminal" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Console</span>
+                </button>
+                <button onclick="switchMainTab('overview')" class="p-2.5 rounded-xl text-dash-muted hover:text-white hover:bg-white/5 flex items-center justify-center transition-all group relative">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    <span class="absolute left-16 bg-black border border-white/20 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">Layers</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Bottom Sidebar Actions -->
+        <div class="flex flex-col space-y-3 w-full px-2 pt-4 border-t border-[#1E1E26]">
+            <button onclick="openModal('Help & Documentation')" class="p-2 rounded-xl text-dash-muted hover:text-white flex items-center justify-center">
+                <i data-lucide="help-circle" class="w-4 h-4"></i>
+            </button>
+            <button onclick="openModal('Workspace Settings')" class="p-2 rounded-xl text-dash-muted hover:text-white flex items-center justify-center">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0">
+        
+        <!-- Top Navigation Header Bar -->
+        <header class="h-14 border-b border-[#1E1E26] bg-[#08080A]/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+            <div class="flex items-center space-x-3">
+                <i data-lucide="layout-template" class="w-4 h-4 text-dash-muted"></i>
+                <span class="text-sm font-medium text-white tracking-tight" id="header-page-title">Overview</span>
+            </div>
+
+            <!-- Header Right Controls (Search, Notifications, Profile) -->
+            <div class="flex items-center space-x-3">
+                
+                <button onclick="openCommandPalette()" class="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-[#121216] border border-[#1E1E26] text-xs text-dash-muted hover:border-[#2A2A38] transition-all">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline font-mono text-[11px]">Search...</span>
+                    <kbd class="font-mono text-[10px] bg-white/10 px-1 rounded text-white">/</kbd>
+                </button>
+
+                <button onclick="toggleNotifications()" class="relative p-2 rounded-lg bg-[#121216] border border-[#1E1E26] text-dash-muted hover:text-white transition-all">
+                    <i data-lucide="bell" class="w-4 h-4"></i>
+                    <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                </button>
+
+                <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-gray-700 to-gray-300 overflow-hidden border border-white/20 cursor-pointer flex items-center justify-center font-bold text-xs text-black" onclick="openModal('User Profile & Preferences')">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="User Avatar" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/100x100/333/FFF?text=U'">
+                </div>
+
+            </div>
+        </header>
+
+        <main class="flex-1 p-6 space-y-6 overflow-y-auto">
+
+            <!-- MAIN VIEW 1: OVERVIEW DASHBOARD -->
+            <section id="view-overview" class="main-view space-y-6">
+
+                <!-- ROW 1: Conversion Funnel Card + Order Distribution Pie Card -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- LEFT TOP CARD: Conversion Funnel (Sankey Flow Diagram) -->
+                    <div class="lg:col-span-7 dash-card p-6 flex flex-col justify-between space-y-6">
+                        
+                        <!-- Header Stat -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                            <div>
+                                <div class="flex items-baseline space-x-2">
+                                    <span class="text-3xl font-bold font-mono tracking-tight text-white" id="funnel-rate-stat">7.8%</span>
+                                    <span class="inline-flex items-center text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                        <i data-lucide="arrow-up-right" class="w-3 h-3 mr-0.5"></i> 0.4%
+                                    </span>
+                                </div>
+                                <p class="text-xs text-dash-muted mt-1 font-sans">
+                                    Overall purchase rate · <span id="funnel-orders-stat" class="text-gray-300">5.6K orders</span> from <span id="funnel-views-stat" class="text-gray-300">72K views</span> - Last 30 days
+                                </p>
+                            </div>
+                            <span class="text-[11px] font-mono text-dash-muted">vs prior 30 days</span>
+                        </div>
+
+                        <!-- Funnel Diagram Visual Canvas (SVG Tapering Ribbon) -->
+                        <div class="relative w-full py-4">
+                            
+                            <!-- Top Stage Numbers Row -->
+                            <div class="grid grid-cols-4 text-center font-mono text-xs text-gray-300 mb-2">
+                                <span id="stage-val-1">72K</span>
+                                <span id="stage-val-2">38.2K</span>
+                                <span id="stage-val-3">16.8K</span>
+                                <span id="stage-val-4">5.6K</span>
+                            </div>
+
+                            <!-- SVG Ribbon Canvas -->
+                            <div class="relative h-36 w-full">
+                                <svg class="w-full h-full overflow-visible" viewBox="0 0 800 140" preserveAspectRatio="none">
+                                    <defs>
+                                        <!-- Gradient Fill for Funnel Ribbon -->
+                                        <linearGradient id="funnelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#4A4A5A" stop-opacity="0.8"/>
+                                            <stop offset="35%" stop-color="#383846" stop-opacity="0.8"/>
+                                            <stop offset="70%" stop-color="#282834" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#1E1E28" stop-opacity="0.9"/>
+                                        </linearGradient>
+
+                                        <!-- Stage 1 Path Fill -->
+                                        <linearGradient id="s1Grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#717182" stop-opacity="0.9"/>
+                                            <stop offset="100%" stop-color="#525263" stop-opacity="0.85"/>
+                                        </linearGradient>
+
+                                        <!-- Stage 2 Path Fill -->
+                                        <linearGradient id="s2Grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#525263" stop-opacity="0.85"/>
+                                            <stop offset="100%" stop-color="#3A3A49" stop-opacity="0.8"/>
+                                        </linearGradient>
+
+                                        <!-- Stage 3 Path Fill -->
+                                        <linearGradient id="s3Grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#3A3A49" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#282836" stop-opacity="0.8"/>
+                                        </linearGradient>
+
+                                        <!-- Stage 4 Path Fill -->
+                                        <linearGradient id="s4Grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#282836" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#1E1E26" stop-opacity="0.9"/>
+                                        </linearGradient>
+                                    </defs>
+
+                                    <!-- Segment 1: Product Views to Add to Cart -->
+                                    <path d="M 0,0 C 120,0 120,20 200,20 L 200,120 C 120,120 120,140 0,140 Z" fill="url(#s1Grad)" class="funnel-stage" onclick="inspectFunnelStage('Product Views', '72,000', '100%')" />
+
+                                    <!-- Segment 2: Add to Cart to Checkout -->
+                                    <path d="M 200,20 C 320,20 320,40 400,40 L 400,100 C 320,100 320,120 200,120 Z" fill="url(#s2Grad)" class="funnel-stage" onclick="inspectFunnelStage('Add to Cart', '38,200', '53%')" />
+
+                                    <!-- Segment 3: Checkout to Purchase -->
+                                    <path d="M 400,40 C 520,40 520,55 600,55 L 600,85 C 520,85 520,100 400,100 Z" fill="url(#s3Grad)" class="funnel-stage" onclick="inspectFunnelStage('Checkout', '16,800', '23%')" />
+
+                                    <!-- Segment 4: Purchase -->
+                                    <path d="M 600,55 C 720,55 720,60 800,60 L 800,80 C 720,80 720,85 600,85 Z" fill="url(#s4Grad)" class="funnel-stage" onclick="inspectFunnelStage('Purchase', '5,600', '8%')" />
+                                </svg>
+
+                                <!-- Percentage Overlay Pill Badges -->
+                                <div class="absolute inset-0 flex items-center justify-between px-10 pointer-events-none font-mono font-bold text-xs">
+                                    <span class="bg-white text-black px-2.5 py-1 rounded-full shadow-md">100%</span>
+                                    <span class="bg-white text-black px-2.5 py-1 rounded-full shadow-md ml-4">53%</span>
+                                    <span class="bg-white text-black px-2.5 py-1 rounded-full shadow-md ml-4">23%</span>
+                                    <span class="bg-white text-black px-2.5 py-1 rounded-full shadow-md">8%</span>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Stage Labels Row -->
+                            <div class="grid grid-cols-4 text-center font-sans text-[11px] text-dash-muted mt-3">
+                                <span>Product views</span>
+                                <span>Add to cart</span>
+                                <span>Checkout</span>
+                                <span>Purchase</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- RIGHT TOP CARD: Orders Distribution Donut Chart -->
+                    <div class="lg:col-span-5 dash-card p-6 flex flex-col justify-between space-y-4">
+                        
+                        <!-- Header Stat -->
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="text-3xl font-bold font-mono tracking-tight text-white">1,842</div>
+                                <p class="text-xs text-dash-muted mt-1">Total orders in last 30 days</p>
+                            </div>
+                            <span class="inline-flex items-center text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                <i data-lucide="arrow-up-right" class="w-3 h-3 mr-0.5"></i> 0.5%
+                            </span>
+                        </div>
+
+                        <!-- Donut Chart & Legend Split View -->
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center pt-2">
+                            
+                            <!-- Donut Canvas -->
+                            <div class="sm:col-span-6 relative h-44 flex items-center justify-center">
+                                <canvas id="ordersPieChart"></canvas>
+                            </div>
+
+                            <!-- Styled Legend List Matching Reference Visual -->
+                            <div class="sm:col-span-6 space-y-2 font-mono text-xs">
+                                <div class="flex items-center justify-between text-gray-300">
+                                    <span class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 rounded-sm bg-white"></span>
+                                        <span class="font-sans text-dash-muted">Organic search</span>
+                                    </span>
+                                    <span>37.9% <span class="text-dash-muted ml-1">698</span></span>
+                                </div>
+
+                                <div class="flex items-center justify-between text-gray-300">
+                                    <span class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 rounded-sm bg-gray-400"></span>
+                                        <span class="font-sans text-dash-muted">Direct</span>
+                                    </span>
+                                    <span>28.0% <span class="text-dash-muted ml-1">516</span></span>
+                                </div>
+
+                                <div class="flex items-center justify-between text-gray-300">
+                                    <span class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 rounded-sm bg-gray-600"></span>
+                                        <span class="font-sans text-dash-muted">Referral</span>
+                                    </span>
+                                    <span>15.0% <span class="text-dash-muted ml-1">276</span></span>
+                                </div>
+
+                                <div class="flex items-center justify-between text-gray-300">
+                                    <span class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 rounded-sm bg-gray-700"></span>
+                                        <span class="font-sans text-dash-muted">Paid social</span>
+                                    </span>
+                                    <span>12.0% <span class="text-dash-muted ml-1">221</span></span>
+                                </div>
+
+                                <div class="flex items-center justify-between text-gray-300">
+                                    <span class="flex items-center space-x-2">
+                                        <span class="w-2 h-2 rounded-sm bg-gray-800"></span>
+                                        <span class="font-sans text-dash-muted">Others</span>
+                                    </span>
+                                    <span>7.1% <span class="text-dash-muted ml-1">131</span></span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ROW 2: 4 Bottom Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <!-- CARD 1: Traffic Sources (12 months) -->
+                    <div class="dash-card p-5 space-y-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center text-xs font-mono text-dash-muted mb-4">
+                                <span class="flex items-center space-x-1.5 text-white font-sans">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-dash-muted"></i>
+                                    <span>Traffic sources</span>
+                                </span>
+                                <span>12 months</span>
+                            </div>
+
+                            <div class="space-y-3 font-sans text-xs">
+                                
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <span>Organic search</span>
+                                        <span class="font-mono text-gray-400">4.1K</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full dotted-track relative">
+                                        <div class="bg-white h-1.5 rounded-full w-[85%]"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <span>Direct</span>
+                                        <span class="font-mono text-gray-400">2.9K</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full dotted-track relative">
+                                        <div class="bg-gray-400 h-1.5 rounded-full w-[62%]"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <span>Referral</span>
+                                        <span class="font-mono text-gray-400">1.6K</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full dotted-track relative">
+                                        <div class="bg-gray-500 h-1.5 rounded-full w-[40%]"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <span>Paid social</span>
+                                        <span class="font-mono text-gray-400">980</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full dotted-track relative">
+                                        <div class="bg-gray-600 h-1.5 rounded-full w-[25%]"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="flex justify-between items-center text-gray-300">
+                                        <span>Email</span>
+                                        <span class="font-mono text-gray-400">620</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full dotted-track relative">
+                                        <div class="bg-gray-700 h-1.5 rounded-full w-[16%]"></div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: Team Workspace Card -->
+                    <div class="dash-card p-5 flex flex-col justify-between space-y-4">
+                        <div class="flex justify-between items-center text-xs text-dash-muted">
+                            <span class="flex items-center space-x-1.5 text-white font-sans">
+                                <i data-lucide="users" class="w-3.5 h-3.5 text-dash-muted"></i>
+                                <span>Team</span>
+                            </span>
+                        </div>
+
+                        <div class="text-center space-y-3 my-auto py-2">
+                            
+                            <!-- Overlapping Avatar Stack -->
+                            <div class="flex items-center justify-center -space-x-2" id="team-avatar-stack">
+                                <div class="w-9 h-9 rounded-full bg-gray-700 border-2 border-[#121216] overflow-hidden">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" class="w-full h-full object-cover">
+                                </div>
+                                <div class="w-9 h-9 rounded-full bg-gray-800 border-2 border-[#121216] flex items-center justify-center text-xs font-mono text-white font-bold">
+                                    🐰
+                                </div>
+                                <div class="w-9 h-9 rounded-full bg-gray-600 border-2 border-[#121216] overflow-hidden">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" class="w-full h-full object-cover">
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-semibold text-white">No Team Members</h4>
+                                <p class="text-xs text-dash-muted mt-1 px-4 leading-relaxed">
+                                    Invite your team to collaborate on this project.
+                                </p>
+                            </div>
+
+                            <button onclick="openModal('Invite Team Members')" class="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium border border-white/10 transition-all inline-flex items-center space-x-1.5">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>Invite Members</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: Sales by Hour (7x24 Matrix Heatmap) -->
+                    <div class="dash-card p-5 space-y-3 flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center space-x-1.5 text-xs text-dash-muted">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                    <span>Sales by hour</span>
+                                </div>
+                                <div class="text-lg font-bold font-mono text-white mt-1">$4.8K</div>
+                                <div class="text-[10px] text-dash-muted">Peak - Sat 9p–10p</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[11px] font-mono text-dash-muted">Last 7 days</span>
+                                <div class="text-xs font-mono font-bold text-gray-300 mt-1">$1.5K</div>
+                                <div class="text-[10px] text-dash-muted">Avg / hour</div>
+                            </div>
+                        </div>
+
+                        <!-- 7x24 Heatmap Visual Matrix Grid -->
+                        <div class="space-y-1">
+                            <div class="grid grid-cols-12 gap-1 text-[8px] font-mono text-dash-muted text-center">
+                                <span class="col-span-2 text-left">Mon</span>
+                                <span class="col-span-1">12a</span>
+                                <span class="col-span-2">6a</span>
+                                <span class="col-span-2">12p</span>
+                                <span class="col-span-2">6p</span>
+                                <span class="col-span-3 text-right">12a</span>
+                            </div>
+
+                            <div class="space-y-1" id="heatmap-grid-rows">
+                                <!-- JS Populated Heatmap Cells -->
+                            </div>
+
+                            <!-- Heatmap Legend Footer -->
+                            <div class="flex justify-between items-center pt-2 text-[9px] font-mono text-dash-muted">
+                                <span>Lower</span>
+                                <div class="flex space-x-1">
+                                    <span class="w-2 h-2 rounded-sm bg-[#1A1A22]"></span>
+                                    <span class="w-2 h-2 rounded-sm bg-[#383848]"></span>
+                                    <span class="w-2 h-2 rounded-sm bg-[#686880]"></span>
+                                    <span class="w-2 h-2 rounded-sm bg-[#A0A0B8]"></span>
+                                    <span class="w-2 h-2 rounded-sm bg-[#FFFFFF]"></span>
+                                </div>
+                                <span>Higher</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: Quick Actions Card -->
+                    <div class="dash-card p-5 flex flex-col justify-between space-y-3">
+                        <div class="flex items-center space-x-1.5 text-xs text-dash-muted">
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                            <span>Quick actions</span>
+                        </div>
+
+                        <div class="space-y-2 font-sans text-xs">
+                            
+                            <button onclick="openModal('Create Campaign')" class="w-full text-left p-2.5 rounded-lg bg-black/40 hover:bg-white/5 border border-white/5 transition-all flex items-center justify-between group">
+                                <div>
+                                    <div class="font-medium text-white flex items-center space-x-1">
+                                        <span>+ Add Campaign</span>
+                                    </div>
+                                    <p class="text-[10px] text-dash-muted mt-0.5">Create a Campaign.</p>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-dash-muted group-hover:text-white transition-colors"></i>
+                            </button>
+
+                            <button onclick="switchMainTab('ecommerce')" class="w-full text-left p-2.5 rounded-lg bg-black/40 hover:bg-white/5 border border-white/5 transition-all flex items-center justify-between group">
+                                <div>
+                                    <div class="font-medium text-white flex items-center space-x-1">
+                                        <i data-lucide="package" class="w-3 h-3 text-dash-muted inline"></i>
+                                        <span>Review unfulfilled</span>
+                                    </div>
+                                    <p class="text-[10px] text-dash-muted mt-0.5">Orders waiting to ship.</p>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-dash-muted group-hover:text-white transition-colors"></i>
+                            </button>
+
+                            <button onclick="openModal('Workspace Settings')" class="w-full text-left p-2.5 rounded-lg bg-black/40 hover:bg-white/5 border border-white/5 transition-all flex items-center justify-between group">
+                                <div>
+                                    <div class="font-medium text-white flex items-center space-x-1">
+                                        <i data-lucide="sliders" class="w-3 h-3 text-dash-muted inline"></i>
+                                        <span>Workspace settings</span>
+                                    </div>
+                                    <p class="text-[10px] text-dash-muted mt-0.5">Team, roles, permissions.</p>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-dash-muted group-hover:text-white transition-colors"></i>
+                            </button>
+
+                            <button onclick="exportSalesCSV()" class="w-full text-left p-2.5 rounded-lg bg-black/40 hover:bg-white/5 border border-white/5 transition-all flex items-center justify-between group">
+                                <div>
+                                    <div class="font-medium text-white flex items-center space-x-1">
+                                        <i data-lucide="download" class="w-3 h-3 text-dash-muted inline"></i>
+                                        <span>Export sales</span>
+                                    </div>
+                                    <p class="text-[10px] text-dash-muted mt-0.5">CSV for accountings.</p>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-dash-muted group-hover:text-white transition-colors"></i>
+                            </button>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- SECONDARY VIEW 2: ANALYTICS DETAIL STREAM -->
+            <section id="view-analytics" class="main-view hidden space-y-6">
+                <div class="dash-card p-6 space-y-4">
+                    <h2 class="text-xl font-bold text-white font-mono">Detailed Analytics & Telemetry Stream</h2>
+                    <p class="text-xs text-dash-muted">Explore real-time cohort retention curves, impression metrics, and hourly conversions.</p>
+                    <div class="h-80 w-full relative pt-4">
+                        <canvas id="analyticsDetailChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECONDARY VIEW 3: ORDERS / E-COMMERCE VIEW -->
+            <section id="view-ecommerce" class="main-view hidden space-y-6">
+                <div class="dash-card p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-bold text-white font-mono">Unfulfilled Orders & Fulfillment Pipeline</h2>
+                            <p class="text-xs text-dash-muted">Review 1,842 total orders waiting to ship.</p>
+                        </div>
+                        <button onclick="showToast('Batch fulfillment initiated!')" class="px-4 py-2 bg-white text-black text-xs font-semibold rounded-lg hover:bg-gray-200">
+                            Ship All Ready Orders
+                        </button>
+                    </div>
+
+                    <!-- Orders Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs font-mono">
+                            <thead>
+                                <tr class="border-b border-[#1E1E26] text-dash-muted">
+                                    <th class="py-3 px-2">Order ID</th>
+                                    <th class="py-3 px-2">Customer</th>
+                                    <th class="py-3 px-2">Channel</th>
+                                    <th class="py-3 px-2">Total</th>
+                                    <th class="py-3 px-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#1E1E26] text-gray-300">
+                                <tr>
+                                    <td class="py-3 px-2 font-bold text-white">#ORD-8941</td>
+                                    <td class="py-3 px-2">Sarah Jenkins</td>
+                                    <td class="py-3 px-2">Organic Search</td>
+                                    <td class="py-3 px-2">$142.50</td>
+                                    <td class="py-3 px-2"><span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pending</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-2 font-bold text-white">#ORD-8942</td>
+                                    <td class="py-3 px-2">David Miller</td>
+                                    <td class="py-3 px-2">Direct</td>
+                                    <td class="py-3 px-2">$289.00</td>
+                                    <td class="py-3 px-2"><span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pending</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-2 font-bold text-white">#ORD-8943</td>
+                                    <td class="py-3 px-2">Alex Rivera</td>
+                                    <td class="py-3 px-2">Paid Social</td>
+                                    <td class="py-3 px-2">$74.00</td>
+                                    <td class="py-3 px-2"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Shipped</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Command Palette Search Modal -->
+    <div id="command-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-start justify-center pt-20 p-4">
+        <div class="dash-card max-w-lg w-full p-4 space-y-4 shadow-2xl relative">
+            <div class="flex items-center space-x-3 border-b border-[#1E1E26] pb-3">
+                <i data-lucide="search" class="w-4 h-4 text-dash-muted"></i>
+                <input type="text" id="cmd-input" placeholder="Type a command or search metrics..." class="w-full bg-transparent text-sm text-white focus:outline-none font-mono">
+                <kbd onclick="closeCommandPalette()" class="text-xs bg-white/10 text-dash-muted px-1.5 py-0.5 rounded cursor-pointer">ESC</kbd>
+            </div>
+            <div class="space-y-1 font-sans text-xs">
+                <div class="p-2 hover:bg-white/5 rounded cursor-pointer text-white flex justify-between" onclick="switchMainTab('overview'); closeCommandPalette();">
+                    <span>Go to Overview Dashboard</span>
+                    <span class="text-dash-muted font-mono">Jump</span>
+                </div>
+                <div class="p-2 hover:bg-white/5 rounded cursor-pointer text-white flex justify-between" onclick="switchMainTab('ecommerce'); closeCommandPalette();">
+                    <span>Review Unfulfilled Orders (1,842)</span>
+                    <span class="text-dash-muted font-mono">Orders</span>
+                </div>
+                <div class="p-2 hover:bg-white/5 rounded cursor-pointer text-white flex justify-between" onclick="exportSalesCSV(); closeCommandPalette();">
+                    <span>Export Sales CSV Report</span>
+                    <span class="text-dash-muted font-mono">Export</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Action Modal -->
+    <div id="general-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="dash-card max-w-md w-full p-6 space-y-5 relative shadow-2xl">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-dash-muted hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <div class="space-y-2">
+                <h3 class="text-lg font-bold text-white font-mono" id="modal-title">Action Dialog</h3>
+                <p class="text-xs text-dash-muted" id="modal-desc">Manage workspace settings and configurations.</p>
+            </div>
+
+            <form onsubmit="handleModalSubmit(event)" class="space-y-4 text-xs font-mono">
+                <div>
+                    <label class="block text-dash-muted mb-1">Email / Target Name</label>
+                    <input type="text" required placeholder="member@company.com" class="w-full bg-black/60 border border-[#1E1E26] rounded-lg p-2.5 text-white focus:outline-none focus:border-white/30">
+                </div>
+                <div>
+                    <label class="block text-dash-muted mb-1">Role / Access Level</label>
+                    <select class="w-full bg-black/60 border border-[#1E1E26] rounded-lg p-2.5 text-white focus:outline-none">
+                        <option>Admin</option>
+                        <option selected>Editor</option>
+                        <option>Viewer</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-lg bg-white text-black font-semibold hover:bg-gray-200 transition-all">
+                    Confirm Action
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast Box -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 bg-[#121216] border border-white/20 text-white px-4 py-3 rounded-xl text-xs font-mono hidden flex items-center space-x-2 shadow-2xl">
+        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toast-msg">Action processed successfully!</span>
+    </div>
+
+    <script>
+        // Safe Lucide initialization helper with retry polling
+        function safeInitIcons() {
+            if (typeof window.lucide !== 'undefined' && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            safeInitIcons();
+            setTimeout(safeInitIcons, 200);
+            setTimeout(safeInitIcons, 800);
+            
+            renderHeatmapGrid();
+            initCharts();
+
+            // Keyboard shortcut for command palette
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '/') {
+                    e.preventDefault();
+                    openCommandPalette();
+                } else if (e.key === 'Escape') {
+                    closeCommandPalette();
+                    closeModal();
+                }
+            });
+        });
+
+        // Tab Switching logic
+        function switchMainTab(tabName) {
+            document.querySelectorAll('.main-view').forEach(view => view.classList.add('hidden'));
+            document.querySelectorAll('.side-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-white/10', 'text-white');
+                btn.classList.add('text-dash-muted');
+            });
+
+            const targetView = document.getElementById(`view-${tabName}`) || document.getElementById('view-overview');
+            targetView.classList.remove('hidden');
+
+            const activeSideBtn = document.getElementById(`sidebar-${tabName}`);
+            if (activeSideBtn) {
+                activeSideBtn.classList.add('bg-white/10', 'text-white');
+                activeSideBtn.classList.remove('text-dash-muted');
+            }
+
+            document.getElementById('header-page-title').innerText = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+        }
+
+        // Render Heatmap 7x24 Matrix Grid
+        function renderHeatmapGrid() {
+            const container = document.getElementById('heatmap-grid-rows');
+            if (!container) return;
+
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            let html = '';
+
+            days.forEach((day, dIdx) => {
+                html += `<div class="flex items-center space-x-1">`;
+                // 24 Hours Blocks
+                for (let h = 0; h < 24; h++) {
+                    // Intensity calculation simulation (Peak around Sat 9p-10p = Sat dIdx 5, hour 21)
+                    let intensity = Math.random() * 0.4;
+                    if (dIdx === 5 && (h >= 19 && h <= 22)) intensity = 0.95; // Sat Peak
+                    if (dIdx === 4 && (h >= 18 && h <= 23)) intensity = 0.75; // Fri Night
+
+                    let bgHex = '#1A1A22';
+                    if (intensity > 0.85) bgHex = '#FFFFFF';
+                    else if (intensity > 0.65) bgHex = '#A0A0B8';
+                    else if (intensity > 0.45) bgHex = '#686880';
+                    else if (intensity > 0.25) bgHex = '#383848';
+
+                    const estSales = Math.round(intensity * 4800);
+                    html += `<div class="heatmap-cell flex-1 h-2 rounded-[1px]" style="background-color: ${bgHex}" title="${day} ${h}:00 - $${estSales}"></div>`;
+                }
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Chart.js Donut Chart & Analytics Setup
+        let ordersPieChartInstance, analyticsChartInstance;
+
+        function initCharts() {
+            // Chart 1: Donut Orders Distribution
+            const ctxPie = document.getElementById('ordersPieChart').getContext('2d');
+            ordersPieChartInstance = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Organic search', 'Direct', 'Referral', 'Paid social', 'Others'],
+                    datasets: [{
+                        data: [698, 516, 276, 221, 131],
+                        backgroundColor: ['#FFFFFF', '#9CA3AF', '#4B5563', '#374151', '#1F2937'],
+                        borderWidth: 2,
+                        borderColor: '#121216'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Chart 2: Analytics Detail Canvas
+            const ctxAnalytics = document.getElementById('analyticsDetailChart').getContext('2d');
+            analyticsChartInstance = new Chart(ctxAnalytics, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+                    datasets: [
+                        {
+                            label: 'Conversion Volume',
+                            data: [1200, 1450, 1900, 1600, 2100, 2400, 2200, 2800],
+                            borderColor: '#FFFFFF',
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#8A8A9E' } } },
+                    scales: {
+                        x: { ticks: { color: '#8A8A9E' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#8A8A9E' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        // Interactive Handlers
+        function inspectFunnelStage(stageName, volume, percentage) {
+            showToast(`${stageName}: ${volume} (${percentage} of initial traffic)`);
+        }
+
+        function exportSalesCSV() {
+            const csvData = "Order ID,Customer,Channel,Total,Status\n#ORD-8941,Sarah Jenkins,Organic Search,$142.50,Pending\n#ORD-8942,David Miller,Direct,$289.00,Pending\n#ORD-8943,Alex Rivera,Paid Social,$74.00,Shipped";
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'sales_report_last30days.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Exporting sales_report_last30days.csv...");
+        }
+
+        function openCommandPalette() {
+            document.getElementById('command-modal').classList.remove('hidden');
+            document.getElementById('cmd-input').focus();
+        }
+
+        function closeCommandPalette() {
+            document.getElementById('command-modal').classList.add('hidden');
+        }
+
+        function openModal(title) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('general-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('general-modal').classList.add('hidden');
+        }
+
+        function handleModalSubmit(e) {
+            e.preventDefault();
+            closeModal();
+            showToast("Request submitted successfully!");
+        }
+
+        function toggleNotifications() {
+            showToast("No new unread system notifications.");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3200);
+        }
+    </script>
+</body>
+</html>
