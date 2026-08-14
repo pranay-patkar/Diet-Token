@@ -1,0 +1,9 @@
+# core/ dependencies
+sentence-transformers>=2.2.0
+tiktoken>=0.5.0
+
+# optional, only used if prefer_spacy=True in sentence_split.py
+# spacy>=3.7.0
+
+# testing
+pytest>=7.4.0
