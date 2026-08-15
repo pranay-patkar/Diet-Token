@@ -58,8 +58,8 @@ not a free speed-up:
 
 ```
               ┌─────────────┐        ┌──────────────────┐
- Query + ───▶ │ BM25 filter │ ─────▶ │  Cross-Encoder    │ ───▶ Kept sentences
- Chunk        │ keep_frac   │  336   │  ms-marco-MiniLM  │ 218
+ Query + ───▶│ BM25 filter   │ ────▶ │  Cross-Encoder      │ ───▶ Kept sentences
+ Chunk        │ keep_frac     │  336   │  ms-marco-MiniLM     │ 218
  (560 sent)   └─────────────┘        └──────────────────┘
                     │                         │
                     ▼                         ▼
