@@ -187,6 +187,8 @@ class EmbeddingScorer:
 # Entry point: two-stage scoring pipeline
 # --------------------------------------------------------------------------
 
+from core.hybrid_filter import HybridPreFilter
+
 def score_sentences(
     query: str,
     sentences: list[Sentence],
@@ -197,36 +199,44 @@ def score_sentences(
     use_prefilter: bool = True,
 ) -> list[ScoredSentence]:
     """
-    Full two-stage scoring: BM25 pre-filter, then cross-encoder on survivors.
-
-    Sentences filtered out by BM25 are NOT dropped — they're returned with
-    score=0.0 and scorer_name="bm25-filtered" so the pruner can still apply
-    floor logic (e.g. "keep at least 1 sentence") without needing to know
-    about the filtering step.
+    Run the full two-stage scoring pipeline: BM25/Hybrid pre-filter -> CrossEncoder.
     """
     if not sentences:
         return []
 
+    # Stage 1: Pre-filter (defaults to HybridPreFilter if none provided)
     if use_prefilter:
-        bm25 = bm25_prefilter or BM25PreFilter()
-        survivors, filtered_out = bm25.filter(
-            query, sentences,
+        prefilter = bm25_prefilter if bm25_prefilter is not None else HybridPreFilter()
+        survivors, filtered_out = prefilter.filter(
+            query,
+            sentences,
             keep_fraction=prefilter_keep_fraction,
             min_keep=prefilter_min_keep,
         )
     else:
-        survivors, filtered_out = list(sentences), []
+        survivors = list(sentences)
+        filtered_out = []
 
-    encoder = cross_encoder or CrossEncoderScorer()
-    scored_survivors = encoder.score(query, survivors)
+    # Stage 2: Cross-Encoder (or fallback fake scorer for testing)
+    if survivors:
+        scorer = cross_encoder if cross_encoder is not None else CrossEncoderScorer()
+        scored_survivors = scorer.score(query, survivors)
+    else:
+        scored_survivors = []
 
-    scored_filtered = [
-        ScoredSentence(sentence=s, score=0.0, scorer_name="bm25-filtered")
-        for s in filtered_out
-    ]
+    # Re-assemble all sentences, giving score 0.0 to pre-filtered ones
+    scored_by_id = {ss.sentence.index: ss for ss in scored_survivors}
+    result = []
+    for s in sentences:
+        if s.index in scored_by_id:
+            result.append(scored_by_id[s.index])
+        else:
+            result.append(
+                ScoredSentence(
+                    sentence=s,
+                    score=0.0,
+                    scorer_name="bm25-filtered",
+                )
+            )
 
-    all_scored = scored_survivors + scored_filtered
-    # restore original order (chunk_id, then index) so downstream reassembly
-    # doesn't need to re-sort
-    all_scored.sort(key=lambda ss: (ss.chunk_id, ss.index))
-    return all_scored
+    return result

@@ -115,13 +115,34 @@ def _prune_contiguous(
     return decisions
 
 
-def reassemble(decisions: list[PruneDecision]) -> str:
+import re
+
+FILLER_WORDS = {
+    "basically", "obviously", "essentially", "literally", "totally",
+    "actually", "definitely", "certainly", "absolutely", "clearly",
+    "very", "extremely", "really", "quite", "rather", "somewhat",
+    "in fact", "as a matter of fact", "it should be noted that",
+    "it is worth mentioning that", "as mentioned before", "needless to say"
+}
+
+def strip_filler_words(text: str) -> str:
+    """Strips out filler sentences, filler words, and redundant adjectives/adverbs."""
+    cleaned = text
+    for filler in FILLER_WORDS:
+        pattern = r'\b' + re.escape(filler) + r'\b,?\s*'
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+    return re.sub(r'\s+', ' ', cleaned).strip()
+
+def reassemble(decisions: list[PruneDecision], strip_filler: bool = True) -> str:
     """
     Joins the kept sentences back into text, preserving original sentence
     order (PruneDecision order from prune_sentences already matches input
     order, but this re-sorts by index defensively in case callers merged
-    lists from multiple sources).
+    lists from multiple sources). Optionally strips filler words/adjectives.
     """
     kept = [d for d in decisions if d.kept]
     kept.sort(key=lambda d: d.scored_sentence.index)
-    return " ".join(d.scored_sentence.text for d in kept)
+    raw_text = " ".join(d.scored_sentence.text for d in kept)
+    if strip_filler:
+        return strip_filler_words(raw_text)
+    return raw_text

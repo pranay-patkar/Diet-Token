@@ -25,10 +25,11 @@ is actually invoked (see core/scorer.py's lazy _load()).
 from __future__ import annotations
 
 from core.models import Sentence
-from core.scorer import BM25PreFilter, CrossEncoderScorer
+from core.scorer import CrossEncoderScorer
+from core.hybrid_filter import HybridPreFilter
 
 KEEP_FRACTION = 0.6
-MIN_KEEP = 2  # matches BM25PreFilter's own default
+MIN_KEEP = 2  # matches HybridPreFilter's own default
 
 TEST_CASES = [
     {
@@ -92,9 +93,9 @@ def make_sentences(texts: list[str], chunk_id: int = 0) -> list[Sentence]:
 def run_case(
     case: dict,
     cross_encoder: CrossEncoderScorer,
-    bm25: BM25PreFilter,
+    hybrid: HybridPreFilter,
 ) -> bool:
-    """Runs one test case. Returns True if BM25 kept the cross-encoder's #1 pick."""
+    """Runs one test case. Returns True if Hybrid kept the cross-encoder's #1 pick."""
     query = case["query"]
     sentences = make_sentences(case["sentences"])
 
@@ -103,8 +104,6 @@ def run_case(
     print(f"QUERY: {query!r}")
     print(f"{'-' * 70}")
 
-    # Ground truth: score every sentence with the cross-encoder directly,
-    # BM25 not involved at all.
     scored = cross_encoder.score(query, sentences)
     ranked = sorted(scored, key=lambda ss: ss.score, reverse=True)
 
@@ -115,42 +114,41 @@ def run_case(
 
     top_sentence_text = ranked[0].text
 
-    # What BM25PreFilter.filter() actually keeps at KEEP_FRACTION.
-    survivors, filtered_out = bm25.filter(
+    survivors, filtered_out = hybrid.filter(
         query, sentences, keep_fraction=KEEP_FRACTION, min_keep=MIN_KEEP
     )
-    bm25_scores = bm25.score(query, sentences)
+    hybrid_scores = hybrid.score_hybrid(query, sentences)
 
-    print(f"\nBM25PreFilter (keep_fraction={KEEP_FRACTION}, min_keep={MIN_KEEP}) "
+    print(f"\nHybridPreFilter (keep_fraction={KEEP_FRACTION}, min_keep={MIN_KEEP}) "
           f"kept {len(survivors)}/{len(sentences)}:")
-    for s in sorted(survivors, key=lambda s: bm25_scores[id(s)], reverse=True):
-        print(f"  KEPT    [{bm25_scores[id(s)]:.3f}] {s.text}")
-    for s in sorted(filtered_out, key=lambda s: bm25_scores[id(s)], reverse=True):
-        print(f"  DROPPED [{bm25_scores[id(s)]:.3f}] {s.text}")
+    for s in sorted(survivors, key=lambda s: hybrid_scores[id(s)], reverse=True):
+        print(f"  KEPT    [{hybrid_scores[id(s)]:.3f}] {s.text}")
+    for s in sorted(filtered_out, key=lambda s: hybrid_scores[id(s)], reverse=True):
+        print(f"  DROPPED [{hybrid_scores[id(s)]:.3f}] {s.text}")
 
     top_survived = any(s.text == top_sentence_text for s in survivors)
 
     print()
     if top_survived:
-        print("✅ PASS — BM25 kept the cross-encoder's top-ranked sentence.")
+        print("[PASS] - Hybrid pre-filter kept the cross-encoder's top-ranked sentence.")
     else:
-        print("❌ FAIL — BM25 dropped the cross-encoder's #1 sentence:")
+        print("[FAIL] - Hybrid pre-filter dropped the cross-encoder's #1 sentence:")
         print(f"   {top_sentence_text!r}")
 
     return top_survived
 
 
 def main():
-    print("Token-Diet — Scorer Validation")
+    print("Token-Diet — Scorer Validation (Hybrid Pre-Filter Enabled)")
     print(f"Config: keep_fraction={KEEP_FRACTION}, min_keep={MIN_KEEP}")
-    print("Loading cross-encoder (first .score() call downloads the model if not cached)...")
+    print("Loading cross-encoder...")
 
     cross_encoder = CrossEncoderScorer()
-    bm25 = BM25PreFilter()
+    hybrid = HybridPreFilter()
 
     results = []
     for case in TEST_CASES:
-        passed = run_case(case, cross_encoder, bm25)
+        passed = run_case(case, cross_encoder, hybrid)
         results.append((case["name"], passed))
 
     print(f"\n{'=' * 70}")
@@ -162,13 +160,7 @@ def main():
         print(f"  [{status}] {name}")
     print(f"\n{passed_count}/{len(results)} cases passed at keep_fraction={KEEP_FRACTION}.")
 
-    if passed_count < len(results):
-        print("\nRecommendation:")
-        print("  - Raise keep_fraction (e.g. 0.75-0.8) to reduce false drops, or")
-        print("  - Skip the pre-filter for small chunks (<~8 sentences) and let the")
-        print("    cross-encoder score everything directly via:")
-        print("    score_sentences(query, sentences, use_prefilter=False)")
-
 
 if __name__ == "__main__":
     main()
+
