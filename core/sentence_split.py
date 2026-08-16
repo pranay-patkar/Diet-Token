@@ -43,8 +43,9 @@ def _looks_like_abbreviation(preceding_text: str) -> bool:
 
 def _extract_atomic_blocks(text: str) -> tuple[str, dict[str, str]]:
     """
-    Extracts markdown code blocks and tables into placeholders so sentence splitting
-    does not break code syntax or tabular structures.
+    Extracts markdown code blocks, tables, lists, blockquotes, YAML frontmatter,
+    and technical inline code into placeholders so sentence splitting does not
+    break structure or code syntax.
     """
     placeholders: dict[str, str] = {}
     counter = 0
@@ -68,13 +69,66 @@ def _extract_atomic_blocks(text: str) -> tuple[str, dict[str, str]]:
         return f"\n\n{ph}.\n\n"
 
     clean = re.sub(r"(?:^[ \t]*\|.+?\|\s*$\n?){2,}", replace_table, clean, flags=re.MULTILINE)
+
+    # 3. Numbered lists ((?:^|\n)((?:\s*\d+\.\s+[^\n]+\n?){2,}))
+    def replace_numbered_list(match):
+        nonlocal counter
+        ph = f"__ATOMIC_BLOCK_{counter}__"
+        counter += 1
+        placeholders[ph] = match.group(0).strip()
+        return f"\n\n{ph}.\n\n"
+
+    clean = re.sub(r"(?:^|\n)((?:\s*\d+\.\s+[^\n]+\n?){2,})", replace_numbered_list, clean)
+
+    # 4. Bulleted lists ((?:^|\n)((?:\s*[-*]\s+[^\n]+\n?){2,}))
+    def replace_bullet_list(match):
+        nonlocal counter
+        ph = f"__ATOMIC_BLOCK_{counter}__"
+        counter += 1
+        placeholders[ph] = match.group(0).strip()
+        return f"\n\n{ph}.\n\n"
+
+    clean = re.sub(r"(?:^|\n)((?:\s*[-*]\s+[^\n]+\n?){2,})", replace_bullet_list, clean)
+
+    # 5. Blockquotes (> ...)
+    def replace_blockquote(match):
+        nonlocal counter
+        ph = f"__ATOMIC_BLOCK_{counter}__"
+        counter += 1
+        placeholders[ph] = match.group(0).strip()
+        return f"\n\n{ph}.\n\n"
+
+    clean = re.sub(r"(?:^|\n)((?:>[^\n]*\n?){2,})", replace_blockquote, clean)
+
+    # 6. YAML frontmatter (--- ... ---)
+    def replace_yaml(match):
+        nonlocal counter
+        ph = f"__ATOMIC_BLOCK_{counter}__"
+        counter += 1
+        placeholders[ph] = match.group(0).strip()
+        return f"\n\n{ph}.\n\n"
+
+    clean = re.sub(r"(?:^|\n)(---\r?\n[\s\S]*?\r?\n---)", replace_yaml, clean)
+
+    # 7. Inline code (technical content only: paths, configs, symbols, digits)
+    def replace_inline_code(match):
+        nonlocal counter
+        inner = match.group(1)
+        if re.search(r"[/.\-_#@:]", inner) or re.search(r"\d{2,}", inner):
+            ph = f"__ATOMIC_INLINE_{counter}__"
+            counter += 1
+            placeholders[ph] = match.group(0)
+            return f" {ph} "
+        return match.group(0)
+
+    clean = re.sub(r"`([^`\n]{4,})`", replace_inline_code, clean)
+
     return clean, placeholders
 
 
 def _restore_atomic_blocks(text: str, placeholders: dict[str, str]) -> str:
     restored = text
     for ph, orig in placeholders.items():
-        # Handle both ph with trailing dot or raw ph
         restored = restored.replace(f"{ph}.", orig)
         restored = restored.replace(ph, orig)
     return restored

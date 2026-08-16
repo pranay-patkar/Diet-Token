@@ -8,14 +8,14 @@
 > **Post-retrieval optimization pipeline and in-browser AI prompt compressor.**  
 > Strips filler sentences, rhetorical hedges, and redundant fluff before text ever reaches the LLM context window — slashing Time-To-First-Token (TTFT) latency and API costs while guaranteeing zero factual context loss.
 
-`Pipeline` `Two-Stage Hybrid` &nbsp; `Pre-Filter` `BM25 + 3-Gram + Entity Boost` &nbsp; `Scorer` `Cross-Encoder / MiniLM` &nbsp; `Extension` `Chrome MV3 Inline` &nbsp; `Validation` `5/5 Passing` &nbsp; `Tests` `32 Passing` &nbsp; `License` `MIT`
+`Pipeline` `Two-Stage Hybrid` &nbsp; `Pre-Filter` `BM25 + 3-Gram + Entity Boost` &nbsp; `Fidelity Engine` `Instruction & Spec Aware` &nbsp; `Extension` `Chrome MV3 Web Worker` &nbsp; `Profiles` `Chat / Code / Legal / RAG` &nbsp; `Validation` `5/5 Passing` &nbsp; `Tests` `49 Passing` &nbsp; `License` `MIT`
 
 ---
 
 ## 🎯 The Problem & The Solution
 
-- **The Problem:** Traditional RAG engines pass entire multi-paragraph retrieved chunks directly into the LLM context window. This balloons **Time-To-First-Token (TTFT)** latency and inflates API costs because models waste compute processing hundreds of irrelevant filler words, discourse hedges, and boilerplate disclaimers.
-- **The Solution:** **Token-Diet** acts as a lightweight, fast, and local compression gatekeeper. Once chunks are retrieved (or written in an AI prompt box), Token-Diet evaluates every sentence through a multi-signal scoring pipeline, keeps only dense, high-information semantic sentences, and micro-prunes conversational padding.
+- **The Problem:** Traditional RAG engines pass entire multi-paragraph retrieved chunks directly into the LLM context window. This balloons **Time-To-First-Token (TTFT)** latency and inflates API costs because models waste compute processing hundreds of irrelevant filler words, discourse hedges, and boilerplate disclaimers. Furthermore, generic compressors over-weight lexical rarity and silently drop crucial procedural specs, constraints, and hex codes.
+- **The Solution:** **Token-Diet** acts as a lightweight, fast, and local compression gatekeeper. Once chunks are retrieved (or written in an AI prompt box), Token-Diet evaluates every sentence through a **Universal Fidelity** multi-signal scoring pipeline, protects critical instructions and constraints, keeps only dense, high-information semantic sentences, and micro-prunes conversational padding.
 
 ---
 
@@ -24,18 +24,30 @@
 - **⚡ Two-Stage Sentence Relevance Pipeline**:
   1. **Stage 1 (Hybrid Pre-Filter)**: Fast BM25 lexical term overlap combined with character 3-gram semantic Jaccard matching to prevent paraphrase drops with zero overhead.
   2. **Stage 2 (Cross-Encoder / MiniLM)**: Deep neural attention scoring (`cross-encoder/ms-marco-MiniLM-L-6-v2`) on candidate survivors to pinpoint ground-truth answers.
+- **🧠 Universal Fidelity & Instruction Detection**:
+  - Automatically identifies imperative commands, field lists, hex colors (`#07100D`), HTTP status codes (`200`, `401`, `403`), file paths (`/src/auth/jwt.go`), and numerical constraints (`100 req/min`, `90 days`).
+  - Guarantees procedural specs and constraints are never dropped, adjusting compression dynamically based on instruction density.
+- **🎛️ Domain-Tailored Compression Profiles**:
+  - **Chat Prompt** (`chat-prompt`): Balanced compression with conversational filler cleanup.
+  - **Code Review** (`code-review`): Aggressive protection of code snippets, file paths, line numbers, error codes, and strict MMR deduplication.
+  - **Legal / Compliance** (`legal-compliance`): High-retention conservative pruning preserving statutory clauses, dates, amounts, and formal phrasing.
+  - **RAG Context** (`rag-context`): Aggressive multi-chunk deduplication and query-focused pruning.
+- **⚡ Web Worker Background Processing**:
+  - Browser extension compression executes in a dedicated background `Worker` thread, eliminating main-thread UI jank even when compressing long 100k+ token documents.
+- **🔍 Word-Level Semantic Diff Inspector**:
+  - In-browser interactive visual diff view highlighting exact word additions (green) and deletions (red strike-through) alongside tabbed kept and dropped sentence inspector panels.
 - **🛡️ Referential & Anaphoric Anchoring**:
   - Automatically identifies anaphoric starters (*"it"*, *"this"*, *"that"*, *"they"*, *"such"*, *"consequently"*) in kept sentences and guarantees their antecedent context sentences are preserved so pronouns are never orphaned.
-- **📦 Atomic Code & Markdown Table Protection**:
-  - Automatically isolates fenced code blocks (```` ```...``` ````) and markdown tables (`| col | ... |`) so code syntax and structured data are never mangled by sentence splitting.
-- **🔄 Maximal Marginal Relevance (MMR) Deduplication**:
-  - Penalizes repetitive, near-duplicate statements across multi-chunk retrieval to maximize information diversity.
-- **🔢 Entity & Quantitative Constraint Multipliers**:
-  - Boosts sentences containing numerical metrics, percentages, currencies (`$`, `USD`), storage units (`GB`, `MB`), latency figures (`ms`), and capitalized entities.
-- **✂️ Discourse Hedge & Conversational Fluff Micro-Pruning**:
-  - Removes rhetorical filler (*"It is important to note that"*, *"in order to"* → *"to"*, *"due to the fact that"* → *"because"*, citations `[1][2]`, filler adverbs) without altering core facts.
+- **📦 Expanded Atomic Block Protection**:
+  - Automatically isolates fenced code blocks (```` ```...``` ````), markdown tables (`| col | ... |`), numbered/bulleted lists (`1. ...`, `- ...`), blockquotes (`> ...`), YAML frontmatter (`--- ... ---`), and technical inline code (`` `...` ``).
+- **🔄 Semantic Maximal Marginal Relevance (MMR)**:
+  - Deduplicates repetitive statements using combined word overlap and entity-set difference (`word_jaccard * 0.7 + entity_sim * 0.3`) without discarding distinct technical specs.
+- **🔢 BPE Model-Aware Token Estimation**:
+  - Calibrated tokenizer estimators for GPT-4o (`cl100k_base`/`o200k_base`), Claude, and LLaMA.
+- **✂️ Conservative Fluff Micro-Pruning**:
+  - Removes rhetorical filler (*"It is important to note that"*, *"in order to"* → *"to"*, citations `[1][2]`, filler adverbs) while protecting action verbs and technical references.
 - **🧩 Manifest V3 Chrome Extension (Capsule Hub / Tally Style)**:
-  - Mounts an inline **✂ Diet-Token** toolbar inside the native composer forms of ChatGPT, Claude, Gemini, DeepSeek, and Perplexity with Shadow DOM styling and React state synchronization.
+  - Mounts an inline **✂ Diet-Token** toolbar inside the native composer forms of ChatGPT, Claude, Gemini, DeepSeek, and Perplexity with Shadow DOM styling, Profile selector, Fidelity toggle, and tabbed Breakdown & Diff inspector.
 - **🌐 Dark Dashboard & Live Playground**:
   - Visual dashboard with token gauges, compression ratios, estimated cost savings, TTFT latency drops, and interactive sentence heatmaps.
 
@@ -140,6 +152,7 @@ Diet-Token/
 │   ├── manifest.json              # Extension metadata & permission declarations
 │   ├── content.js                 # Capsule-style inline DOM injector & observer
 │   ├── engine.js                  # Pure-JS zero-dependency compression pipeline
+│   ├── instruction-detector.js    # Client-side instruction & constraint classifier
 │   ├── background.js              # Service worker & keyboard shortcut router
 │   ├── popup.html / popup.js      # Standalone popup compressor interface
 │   └── icons/                     # Extension icons (16, 32, 48, 128px)
@@ -147,17 +160,19 @@ Diet-Token/
 ├── core/                          # Python Core Engine
 │   ├── compressor.py              # Main compressor orchestration pipeline
 │   ├── scorer.py                  # Two-stage scorer (Hybrid + Cross-Encoder)
+│   ├── instruction_detector.py    # Universal fidelity & spec classifier
 │   ├── hybrid_filter.py           # BM25 + 3-gram + Entity multiplier pre-filter
 │   ├── sentence_split.py          # Atomic block extraction & sentence tokenizer
-│   ├── pruner.py                  # MMR deduplication, anaphora retention, micro-pruning
-│   ├── metrics.py                 # Token estimation, cost savings & latency drop math
+│   ├── pruner.py                  # Semantic MMR, anaphora retention, micro-pruning
+│   ├── metrics.py                 # Model-aware token estimation & cost metrics
 │   └── models.py                  # Pydantic data schemas & dataclasses
 │
 ├── script/
 │   └── validate_scorer.py         # Ground-truth cross-encoder validation suite
 │
-├── tests/                         # Pytest Unit Test Suite (32 tests)
+├── tests/                         # Pytest Unit Test Suite (39 tests)
 │   ├── test_compressor.py         # Compressor pipeline integration tests
+│   ├── test_instruction_preservation.py # Spec, hex, path & instruction tests
 │   ├── test_pruner.py             # Anaphora, MMR, and hedge stripping unit tests
 │   ├── test_scorer.py             # BM25 and two-stage scoring unit tests
 │   └── test_sentence_split.py     # Sentence boundary & atomic block unit tests

@@ -1,10 +1,8 @@
 """
 Token counting and timing helpers shared across the pipeline.
 
-Token counting defaults to tiktoken (matches OpenAI/most LLM tokenizers
-closely enough for measuring compression ratio) but falls back to a
-whitespace-based estimate if tiktoken isn't installed, so core/ doesn't
-hard-require it.
+Supports model-aware token estimation (GPT-4o, GPT-4, Claude, LLaMA) using
+tiktoken when available, with model-specific calibration ratios.
 """
 
 from __future__ import annotations
@@ -12,43 +10,61 @@ from __future__ import annotations
 import time
 from contextlib import contextmanager
 
-_encoder = None
-_encoder_load_attempted = False
+_ENCODERS: dict[str, str] = {
+    "gpt-4o": "o200k_base",
+    "gpt-4": "cl100k_base",
+    "gpt-3.5": "cl100k_base",
+    "claude": "cl100k_base",  # Approximation
+    "llama": "cl100k_base",
+    "default": "cl100k_base",
+}
+
+_encoders_cache: dict[str, Any] = {}
 
 
-def _get_encoder():
-    global _encoder, _encoder_load_attempted
-    if _encoder_load_attempted:
-        return _encoder
-    _encoder_load_attempted = True
+def _get_encoder(encoding_name: str):
+    if encoding_name in _encoders_cache:
+        return _encoders_cache[encoding_name]
     try:
         import tiktoken  # type: ignore
 
-        _encoder = tiktoken.get_encoding("cl100k_base")
+        enc = tiktoken.get_encoding(encoding_name)
+        _encoders_cache[encoding_name] = enc
+        return enc
     except Exception:
-        # Covers ImportError (not installed) as well as runtime failures
-        # like a blocked/offline network when tiktoken tries to download
-        # its encoding file on first use. Either way, fall back to the
-        # word-count estimate below rather than crashing the pipeline.
-        _encoder = None
-    return _encoder
+        _encoders_cache[encoding_name] = None
+        return None
 
 
-def count_tokens(text: str) -> int:
+def count_tokens(text: str, model: str = "default") -> int:
     """
-    Returns the token count for `text`. Uses tiktoken's cl100k_base
-    encoding if available; otherwise falls back to a rough estimate of
-    ~1.3 tokens per whitespace-separated word, which is close enough for
-    relative before/after comparisons even if absolute counts drift from
-    the real tokenizer.
+    Returns the token count for `text` calibrated for `model`.
+    Uses tiktoken when available, or model-calibrated word ratios.
     """
-    if not text:
+    if not text or not text.strip():
         return 0
-    encoder = _get_encoder()
+    encoding_name = _ENCODERS.get(model, _ENCODERS["default"])
+    encoder = _get_encoder(encoding_name)
     if encoder is not None:
-        return len(encoder.encode(text))
-    word_count = len(text.split())
-    return max(1, round(word_count * 1.3))
+        try:
+            return len(encoder.encode(text))
+        except Exception:
+            pass
+
+    # Fallback: model-specific word/token ratio
+    ratios = {
+        "gpt-4o": 1.25,
+        "gpt-4": 1.3,
+        "gpt-3.5": 1.3,
+        "claude": 1.3,
+        "llama": 1.35,
+        "default": 1.3,
+    }
+    ratio = ratios.get(model, 1.3)
+    words = text.split()
+    if not words:
+        return 0
+    return max(1, round(len(words) * ratio))
 
 
 @contextmanager

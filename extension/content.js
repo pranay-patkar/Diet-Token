@@ -4,26 +4,18 @@
  * Implements direct inline DOM injection onto AI chatboxes (ChatGPT, Claude,
  * Gemini, DeepSeek, Perplexity, and general web textareas).
  *
- * Pattern:
- *   1. PROVIDERS map with robust fallback selector chains
- *   2. Active DOM mounting directly inside/adjacent to composer form
- *   3. Polling + Debounced MutationObserver for SPA navigation resilience
- *   4. Shadow DOM to prevent host CSS conflicts (Tailwind / reset resets)
- *   5. React Native Setter bypass for controlled inputs
+ * Universal Fidelity Architecture:
+ *   - Direct inline mounting inside/adjacent to composer forms
+ *   - Shadow DOM styling isolation
+ *   - Fidelity Mode toggle & compression breakdown inspector
+ *   - React native value tracker bypass
  */
 
 (function () {
   "use strict";
 
-  if (window.__TOKEN_DIET_INLINE__) return;
-  window.__TOKEN_DIET_INLINE__ = true;
-
-  console.log("[Token-Diet] Initializing Capsule-style inline toolbar...");
-
-  var settings = { keepFraction: 0.4, costPerMillion: 0.75 };
-
   /* ------------------------------------------------------------------ */
-  /* 1. PROVIDERS Selector Configuration                                */
+  /* 1. PROVIDERS Selector Configuration (Chatbots Only)                */
   /* ------------------------------------------------------------------ */
   var PROVIDERS = {
     chatgpt: {
@@ -71,43 +63,162 @@
         sendButton: 'button[aria-label="Submit"], button[aria-label="Ask"]'
       }
     },
-    generic: {
-      name: "Generic",
-      domains: [],
+    copilot: {
+      name: "Copilot",
+      domains: ["copilot.microsoft.com", "bing.com"],
       selectors: {
-        input: 'textarea, div[contenteditable="true"][role="textbox"], div[contenteditable="true"]',
-        anchor: 'form, div[class*="input"], div[class*="chat"], div[class*="comment"]',
+        input: 'textarea[id*="userInput"], textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="input-area"], div[class*="composer"]',
+        sendButton: 'button[aria-label*="Submit" i], button[aria-label*="Send" i]'
+      }
+    },
+    mistral: {
+      name: "Mistral",
+      domains: ["mistral.ai"],
+      selectors: {
+        input: 'textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="chat-input"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    poe: {
+      name: "Poe",
+      domains: ["poe.com"],
+      selectors: {
+        input: 'textarea[class*="ChatMessageInput"], textarea',
+        anchor: 'footer, form, div[class*="ChatMessageInputContainer"]',
+        sendButton: 'button[class*="sendButton"]'
+      }
+    },
+    local: {
+      name: "Local AI (OpenWebUI / Ollama)",
+      domains: ["localhost", "127.0.0.1", "0.0.0.0", "hf.co", "huggingface.co"],
+      selectors: {
+        input: '#chat-textarea, textarea[placeholder*="message" i], textarea[placeholder*="prompt" i], textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="chat-input"], div[class*="input-area"]',
         sendButton: 'button[type="submit"], button[aria-label*="Send" i]'
       }
     }
   };
 
   function detectProvider() {
-    var host = window.location.hostname || "";
+    var host = (window.location.hostname || "").toLowerCase();
     for (var key in PROVIDERS) {
-      if (key === "generic") continue;
       var p = PROVIDERS[key];
-      if (p.domains.some(function (d) { return host.indexOf(d) !== -1; })) {
+      if (p.domains.some(function (d) {
+        return host === d || host.endsWith("." + d) || host.indexOf(d) !== -1;
+      })) {
         return key;
       }
     }
-    return "generic";
+    return null;
+  }
+
+  // Only run inline toolbar on recognized AI chatbot domains
+  var currentProvider = detectProvider();
+  if (!currentProvider) {
+    return;
+  }
+
+  if (window.__TOKEN_DIET_INLINE__) return;
+  window.__TOKEN_DIET_INLINE__ = true;
+
+  console.log("[Token-Diet] Initializing Capsule toolbar on chatbot: " + PROVIDERS[currentProvider].name);
+
+  var settings = {
+    keepFraction: 0.5,
+    fidelityMode: true,
+    profile: "chat-prompt",
+    costPerMillion: 0.75
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* 2. Web Worker Asynchronous Delegation                              */
+  /* ------------------------------------------------------------------ */
+  var workerInstance = null;
+  var workerReqId = 0;
+  var workerCallbacks = {};
+
+  function getWorker() {
+    if (!workerInstance && typeof Worker !== "undefined") {
+      try {
+        var workerUrl = chrome.runtime.getURL("worker.js");
+        workerInstance = new Worker(workerUrl);
+        workerInstance.onmessage = function (e) {
+          var data = e.data;
+          if (data && data.type === "COMPRESS_RESULT" && workerCallbacks[data.id]) {
+            var cb = workerCallbacks[data.id];
+            delete workerCallbacks[data.id];
+            cb(data);
+          }
+        };
+        workerInstance.onerror = function (err) {
+          console.warn("[Token-Diet] Worker error, falling back to main-thread engine:", err);
+          workerInstance = null;
+        };
+      } catch (err) {
+        console.warn("[Token-Diet] Worker unavailable:", err);
+        workerInstance = null;
+      }
+    }
+    return workerInstance;
+  }
+
+  function compressTextAsync(rawText, query, opts, callback) {
+    var worker = getWorker();
+    if (worker) {
+      var reqId = ++workerReqId;
+      var timeout = setTimeout(function () {
+        if (workerCallbacks[reqId]) {
+          delete workerCallbacks[reqId];
+          if (typeof window.TokenDiet !== "undefined" && window.TokenDiet.compress) {
+            var res = window.TokenDiet.compress(rawText, query, opts);
+            callback(res);
+          }
+        }
+      }, 2500);
+
+      workerCallbacks[reqId] = function (data) {
+        clearTimeout(timeout);
+        if (data.success && data.result) {
+          callback(data.result);
+        } else if (typeof window.TokenDiet !== "undefined" && window.TokenDiet.compress) {
+          var res = window.TokenDiet.compress(rawText, query, opts);
+          callback(res);
+        } else {
+          callback({ compressed: rawText, tokensSaved: 0, error: data.error });
+        }
+      };
+
+      worker.postMessage({
+        type: "COMPRESS",
+        id: reqId,
+        text: rawText,
+        query: query,
+        keepFraction: opts.keepFraction,
+        model: opts.model,
+        fidelityMode: opts.fidelityMode,
+        profile: opts.profile,
+        costPerMillion: opts.costPerMillion
+      });
+    } else if (typeof window.TokenDiet !== "undefined" && window.TokenDiet.compress) {
+      var res = window.TokenDiet.compress(rawText, query, opts);
+      callback(res);
+    } else {
+      callback({ compressed: rawText, tokensSaved: 0, error: "Engine not loaded" });
+    }
   }
 
   function findTextBox() {
-    var providerKey = detectProvider();
-    var p = PROVIDERS[providerKey];
-    var el = document.querySelector(p.selectors.input);
-    if (!el && providerKey !== "generic") {
-      el = document.querySelector(PROVIDERS.generic.selectors.input);
-    }
-    return el;
+    var p = PROVIDERS[currentProvider];
+    if (!p) return null;
+    return document.querySelector(p.selectors.input);
   }
 
   function findAnchor(textBox) {
     if (!textBox) return null;
-    var providerKey = detectProvider();
-    var p = PROVIDERS[providerKey];
+    var p = PROVIDERS[currentProvider];
+    if (!p) return null;
 
     var form = textBox.closest("form");
     if (form) return form;
@@ -121,25 +232,48 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* 2. Shadow DOM Toolbar UI Styles & Component                        */
+  /* 3. Shadow DOM Toolbar UI Styles & Component                        */
   /* ------------------------------------------------------------------ */
   var SCISSORS_ICON =
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>';
 
   var SHADOW_STYLES = [
     ":host { all: initial; display: block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; font-size: 11px; color: #ededf0; }",
-    ".td-bar { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; margin: 4px 0; background: #121216; border: 1px solid #2a2a36; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.45); z-index: 999999; }",
+    ".td-bar { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; margin: 4px 0; background: #121216; border: 1px solid #2a2a36; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.45); z-index: 999999; flex-wrap: wrap; }",
     ".td-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; color: #ededf0; font-weight: 600; font-size: 11px; cursor: pointer; padding: 3px 6px; border-radius: 5px; transition: background 0.15s ease, color 0.15s ease; }",
     ".td-btn:hover { background: rgba(255,255,255,0.08); color: #ffffff; }",
     ".td-btn:active { transform: scale(0.97); }",
     ".td-btn svg { color: #34d399; }",
+    ".td-btn.loading svg { animation: td-spin 1s linear infinite; }",
+    "@keyframes td-spin { 100% { transform: rotate(360deg); } }",
     ".td-badge { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; }",
     ".td-levels { display: flex; gap: 2px; background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; padding: 2px; }",
     ".td-lvl-btn { border: none; background: transparent; color: #8a8a9e; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; cursor: pointer; font-family: ui-monospace, monospace; }",
     ".td-lvl-btn.active { background: rgba(255,255,255,0.14); color: #ffffff; }",
+    ".td-profile-select { background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; color: #ededf0; font-size: 9px; font-weight: 600; padding: 2px 4px; cursor: pointer; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }",
+    ".td-profile-select:hover { border-color: #34d399; }",
+    ".td-fidelity { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #8a8a9e; cursor: pointer; user-select: none; margin-left: 2px; }",
+    ".td-fidelity input { margin: 0; cursor: pointer; accent-color: #34d399; }",
     ".td-action { border: none; background: transparent; color: #8a8a9e; font-size: 10px; cursor: pointer; padding: 2px 5px; border-radius: 4px; }",
     ".td-action:hover { color: #ffffff; }",
-    ".td-action.undo { color: #34d399; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }"
+    ".td-action.undo { color: #34d399; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }",
+    ".td-breakdown { margin-top: 6px; padding: 8px; background: #0a0a0d; border: 1px solid #1e1e26; border-radius: 6px; max-height: 240px; overflow-y: auto; font-size: 10px; }",
+    ".td-breakdown-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: #ededf0; margin-bottom: 6px; }",
+    ".td-tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e1e26; padding-bottom: 4px; margin-bottom: 6px; }",
+    ".td-tab-btn { background: transparent; border: none; color: #8a8a9e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer; }",
+    ".td-tab-btn.active { background: rgba(255,255,255,0.12); color: #34d399; }",
+    ".td-tab-panel { display: none; }",
+    ".td-tab-panel.active { display: block; }",
+    ".td-diff-view { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; padding: 6px; background: #060608; border-radius: 4px; border: 1px solid #181820; max-height: 160px; overflow-y: auto; }",
+    ".td-diff-ctx { color: #c0c0d0; }",
+    ".td-diff-del { background: rgba(239,68,68,0.22); color: #f87171; text-decoration: line-through; border-radius: 2px; padding: 0 1px; }",
+    ".td-diff-add { background: rgba(52,211,153,0.22); color: #34d399; border-radius: 2px; padding: 0 1px; }",
+    ".td-breakdown-section { margin-bottom: 6px; }",
+    ".td-breakdown-label { display: block; color: #8a8a9e; margin-bottom: 2px; }",
+    ".td-breakdown-label.td-dropped { color: #ef4444; }",
+    ".td-breakdown-list { display: flex; flex-direction: column; gap: 2px; }",
+    ".td-breakdown-item { padding: 2px 4px; border-radius: 3px; color: #a0a0b0; word-break: break-word; }",
+    ".td-dropped-item { opacity: 0.6; text-decoration: line-through; }"
   ].join("\n");
 
   var lastUndoState = null;
@@ -163,18 +297,67 @@
       '</button>' +
       '<span class="td-badge" id="td-stat-badge" style="display:none;"></span>' +
       '<div class="td-levels">' +
-      '<button class="td-lvl-btn" type="button" data-level="0.6" title="Light Compression">L</button>' +
-      '<button class="td-lvl-btn active" type="button" data-level="0.4" title="Balanced Compression">B</button>' +
-      '<button class="td-lvl-btn" type="button" data-level="0.25" title="Aggressive Compression">A</button>' +
+      '<button class="td-lvl-btn" type="button" data-level="0.6" title="Light Compression (60% kept)">L</button>' +
+      '<button class="td-lvl-btn active" type="button" data-level="0.5" title="Balanced Compression (50% kept)">B</button>' +
+      '<button class="td-lvl-btn" type="button" data-level="0.25" title="Aggressive Compression (25% kept)">A</button>' +
       '</div>' +
+      '<select class="td-profile-select" id="td-profile-select" title="Compression Profile">' +
+      '<option value="chat-prompt">Chat</option>' +
+      '<option value="code-review">Code</option>' +
+      '<option value="legal-compliance">Legal</option>' +
+      '<option value="rag-context">RAG</option>' +
+      '</select>' +
+      '<label class="td-fidelity">' +
+      '<input type="checkbox" id="td-fidelity-toggle" ' + (settings.fidelityMode ? 'checked' : '') + '>' +
+      '<span>Fidelity</span>' +
+      '</label>' +
       '<button class="td-action undo" type="button" id="td-undo-btn" style="display:none;">Undo</button>';
 
     shadow.appendChild(bar);
 
-    // Prevent clicking our buttons from stealing focus or submitting forms
-    shadow.querySelectorAll("button").forEach(function (btn) {
-      btn.addEventListener("mousedown", function (e) {
+    // Tabbed breakdown panel
+    var breakdown = document.createElement("div");
+    breakdown.className = "td-breakdown";
+    breakdown.id = "td-breakdown";
+    breakdown.style.display = "none";
+    breakdown.innerHTML =
+      '<div class="td-breakdown-header">' +
+      '<span>Compression Inspector</span>' +
+      '<div class="td-tabs">' +
+      '<button class="td-tab-btn active" type="button" data-tab="diff">Diff</button>' +
+      '<button class="td-tab-btn" type="button" data-tab="kept">Kept</button>' +
+      '<button class="td-tab-btn" type="button" data-tab="dropped">Dropped</button>' +
+      '</div>' +
+      '</div>' +
+      '<div class="td-tab-panel active" id="td-panel-diff">' +
+      '<div class="td-diff-view" id="td-diff-content"></div>' +
+      '</div>' +
+      '<div class="td-tab-panel" id="td-panel-kept">' +
+      '<div id="td-kept-list" class="td-breakdown-list"></div>' +
+      '</div>' +
+      '<div class="td-tab-panel" id="td-panel-dropped">' +
+      '<div id="td-dropped-list" class="td-breakdown-list"></div>' +
+      '</div>';
+    shadow.appendChild(breakdown);
+
+    // Tab switching
+    shadow.querySelectorAll(".td-tab-btn").forEach(function (tabBtn) {
+      tabBtn.addEventListener("click", function (e) {
         e.preventDefault();
+        e.stopPropagation();
+        var tab = tabBtn.getAttribute("data-tab");
+        shadow.querySelectorAll(".td-tab-btn").forEach(function (b) {
+          b.classList.toggle("active", b === tabBtn);
+        });
+        shadow.querySelectorAll(".td-tab-panel").forEach(function (p) {
+          p.classList.toggle("active", p.id === "td-panel-" + tab);
+        });
+      });
+    });
+
+    // Prevent clicking buttons from stealing focus or submitting forms
+    shadow.querySelectorAll("button, input, select").forEach(function (el) {
+      el.addEventListener("mousedown", function (e) {
         e.stopPropagation();
       });
     });
@@ -182,13 +365,31 @@
     var compressBtn = shadow.getElementById("td-compress-btn");
     var statBadge = shadow.getElementById("td-stat-badge");
     var undoBtn = shadow.getElementById("td-undo-btn");
+    var fidelityToggle = shadow.getElementById("td-fidelity-toggle");
+    var profileSelect = shadow.getElementById("td-profile-select");
+
+    if (profileSelect) {
+      profileSelect.value = settings.profile;
+      profileSelect.addEventListener("change", function (e) {
+        settings.profile = e.target.value;
+        chrome.storage.local.set({ profile: settings.profile });
+      });
+    }
+
+    fidelityToggle.addEventListener("change", function (e) {
+      settings.fidelityMode = e.target.checked;
+      chrome.storage.local.set({ fidelityMode: settings.fidelityMode });
+      if (!settings.fidelityMode) {
+        breakdown.style.display = "none";
+      }
+    });
 
     compressBtn.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       var input = findTextBox();
       if (!input) return;
-      handleCompress(input, statBadge, undoBtn);
+      handleCompress(input, shadow);
     });
 
     undoBtn.addEventListener("click", function (e) {
@@ -200,6 +401,7 @@
       lastUndoState = null;
       undoBtn.style.display = "none";
       statBadge.style.display = "none";
+      breakdown.style.display = "none";
     });
 
     shadow.querySelectorAll(".td-lvl-btn").forEach(function (lvlBtn) {
@@ -219,7 +421,7 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* 3. React Native Value Setter & Text Extraction                     */
+  /* 4. React Native Value Setter & Text Extraction                     */
   /* ------------------------------------------------------------------ */
   function getFieldText(element) {
     if (!element) return "";
@@ -246,7 +448,6 @@
       element.dispatchEvent(new Event("input", { bubbles: true }));
       element.dispatchEvent(new Event("change", { bubbles: true }));
     } else if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-      // Select entire content and execute native replacement
       var sel = window.getSelection();
       var range = document.createRange();
       range.selectNodeContents(element);
@@ -269,52 +470,97 @@
     }
   }
 
-  function handleCompress(inputElement, badgeEl, undoEl) {
+  function handleCompress(inputElement, shadow) {
+    var compressBtn = shadow ? shadow.getElementById("td-compress-btn") : null;
+    var statBadge = shadow ? shadow.getElementById("td-stat-badge") : null;
+    var undoBtn = shadow ? shadow.getElementById("td-undo-btn") : null;
+    var breakdown = shadow ? shadow.getElementById("td-breakdown") : null;
+    var diffContent = shadow ? shadow.getElementById("td-diff-content") : null;
+    var keptList = shadow ? shadow.getElementById("td-kept-list") : null;
+    var droppedList = shadow ? shadow.getElementById("td-dropped-list") : null;
+
     var rawText = getFieldText(inputElement).trim();
     if (!rawText || rawText.length < 20) {
-      if (badgeEl) {
-        badgeEl.textContent = "Too short";
-        badgeEl.style.display = "inline";
-        setTimeout(function () { badgeEl.style.display = "none"; }, 2000);
+      if (statBadge) {
+        statBadge.textContent = "Too short";
+        statBadge.style.display = "inline";
+        setTimeout(function () { statBadge.style.display = "none"; }, 2000);
       }
       return;
     }
 
-    if (typeof window.TokenDiet === "undefined" || !window.TokenDiet.compress) {
-      console.warn("[Token-Diet] engine.js is not loaded on window.");
-      return;
+    if (compressBtn) {
+      compressBtn.classList.add("loading");
     }
 
-    var res = window.TokenDiet.compress(rawText, "", {
-      keepFraction: settings.keepFraction,
-      costPerMillion: settings.costPerMillion
-    });
+    compressTextAsync(
+      rawText,
+      "",
+      {
+        keepFraction: settings.keepFraction,
+        fidelityMode: settings.fidelityMode,
+        profile: settings.profile,
+        costPerMillion: settings.costPerMillion
+      },
+      function (res) {
+        if (compressBtn) {
+          compressBtn.classList.remove("loading");
+        }
 
-    if (!res.compressed || res.tokensSaved <= 0) {
-      if (badgeEl) {
-        badgeEl.textContent = "Already dense";
-        badgeEl.style.display = "inline";
-        setTimeout(function () { badgeEl.style.display = "none"; }, 2000);
+        if (!res.compressed || res.tokensSaved <= 0) {
+          if (statBadge) {
+            statBadge.textContent = "Already dense";
+            statBadge.style.display = "inline";
+            setTimeout(function () { statBadge.style.display = "none"; }, 2000);
+          }
+          return;
+        }
+
+        lastUndoState = { text: rawText, element: inputElement };
+        writeTextToField(inputElement, res.compressed);
+
+        if (statBadge) {
+          var pct = Math.round(res.compressionRatio * 100);
+          statBadge.textContent = "-" + pct + "% (" + res.tokensSaved + " tok)";
+          statBadge.style.display = "inline";
+        }
+
+        if (undoBtn) {
+          undoBtn.style.display = "inline";
+        }
+
+        if (settings.fidelityMode && breakdown) {
+          // Word-level diff
+          if (diffContent && window.Diff && window.Diff.diffWords) {
+            var diff = window.Diff.diffWords(rawText, res.compressed);
+            diffContent.innerHTML = window.Diff.renderDiffHtml(diff);
+          }
+
+          if (keptList) {
+            keptList.innerHTML = (res.keptSentences || []).map(function (s) {
+              var type = window.InstructionDetector ? window.InstructionDetector.detect(s) : null;
+              var icon = type === "critical" ? "🔴" : type === "instruction" ? "🟡" : "🟢";
+              return '<div class="td-breakdown-item">' + icon + ' ' + s.substring(0, 80) + (s.length > 80 ? '...' : '') + '</div>';
+            }).join("");
+          }
+
+          if (droppedList) {
+            var dropped = (res.droppedByScore || []).concat(res.droppedByRedundancy || []);
+            droppedList.innerHTML = dropped.map(function (s) {
+              return '<div class="td-breakdown-item td-dropped-item">' + s.substring(0, 80) + (s.length > 80 ? '...' : '') + '</div>';
+            }).join("");
+          }
+
+          breakdown.style.display = "block";
+        } else if (breakdown) {
+          breakdown.style.display = "none";
+        }
       }
-      return;
-    }
-
-    lastUndoState = { text: rawText, element: inputElement };
-    writeTextToField(inputElement, res.compressed);
-
-    if (badgeEl) {
-      var pct = Math.round(res.compressionRatio * 100);
-      badgeEl.textContent = "-" + pct + "% (" + res.tokensSaved + " tok)";
-      badgeEl.style.display = "inline";
-    }
-
-    if (undoEl) {
-      undoEl.style.display = "inline";
-    }
+    );
   }
 
   /* ------------------------------------------------------------------ */
-  /* 4. Active In-Page Injection Loop & MutationObserver                */
+  /* 5. Active In-Page Injection Loop & MutationObserver                */
   /* ------------------------------------------------------------------ */
   function ensureToolbarInjected() {
     var textBox = findTextBox();
@@ -324,7 +570,6 @@
     var anchor = findAnchor(textBox);
 
     if (existing) {
-      // If toolbar exists but got detached or moved out of the current form/anchor
       if (anchor && !anchor.parentNode.contains(existing)) {
         anchor.parentNode.insertBefore(existing, anchor);
       }
@@ -338,11 +583,9 @@
     }
   }
 
-  // Strategy A: Immediate and interval polling for SPA dynamic mount
   ensureToolbarInjected();
   var pollInterval = setInterval(ensureToolbarInjected, 1000);
 
-  // Strategy B: MutationObserver on document.body to react instantly to SPA re-renders
   var debounceTimer = null;
   var observer = new MutationObserver(function () {
     if (debounceTimer) return;
@@ -361,10 +604,12 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* 5. Chrome Storage & Shortcut Listeners                             */
+  /* 6. Chrome Storage & Shortcut Listeners                             */
   /* ------------------------------------------------------------------ */
-  chrome.storage.local.get(["keepFraction", "costPerMillion"], function (st) {
+  chrome.storage.local.get(["keepFraction", "fidelityMode", "profile", "costPerMillion"], function (st) {
     if (st.keepFraction != null) settings.keepFraction = st.keepFraction;
+    if (st.fidelityMode != null) settings.fidelityMode = st.fidelityMode;
+    if (st.profile != null) settings.profile = st.profile;
     if (st.costPerMillion != null) settings.costPerMillion = st.costPerMillion;
   });
 
@@ -376,9 +621,7 @@
       if (input) {
         var toolbar = document.getElementById("token-diet-toolbar-host");
         var shadow = toolbar ? toolbar.shadowRoot : null;
-        var badge = shadow ? shadow.getElementById("td-stat-badge") : null;
-        var undo = shadow ? shadow.getElementById("td-undo-btn") : null;
-        handleCompress(input, badge, undo);
+        handleCompress(input, shadow);
       }
       sendResponse({ ok: true });
     }

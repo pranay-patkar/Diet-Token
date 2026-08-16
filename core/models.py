@@ -106,3 +106,64 @@ class CompressionResult:
         if self.original_tokens == 0:
             return 0.0
         return self.tokens_saved / self.original_tokens
+
+
+@dataclass
+class CompressionProfile:
+    """Configuration profile tailored for specific prompt/context modalities."""
+
+    name: str
+    keep_fraction: float = 0.5
+    protect_blocks: list[str] = field(default_factory=lambda: ["code", "table", "inline-code"])
+    instruction_sensitivity: float = 1.0  # multiplier / boost for instruction preservation
+    strip_filler: bool = True
+    mmr_threshold: float = 0.70
+    description: str = ""
+
+
+PROFILES: dict[str, CompressionProfile] = {
+    "chat-prompt": CompressionProfile(
+        name="Chat Prompt",
+        keep_fraction=0.5,
+        protect_blocks=["code", "table", "inline-code"],
+        instruction_sensitivity=1.0,
+        strip_filler=True,
+        mmr_threshold=0.70,
+        description="Balanced pruning for conversational prompts",
+    ),
+    "code-review": CompressionProfile(
+        name="Code Review",
+        keep_fraction=0.5,
+        protect_blocks=["code", "table", "inline-code", "path", "line-number", "hex"],
+        instruction_sensitivity=1.3,
+        strip_filler=True,
+        mmr_threshold=0.80,
+        description="Strict protection for code, paths, configs",
+    ),
+    "legal-compliance": CompressionProfile(
+        name="Legal / Compliance",
+        keep_fraction=0.7,
+        protect_blocks=["code", "table", "date", "amount", "clause-number", "party"],
+        instruction_sensitivity=1.5,
+        strip_filler=False,
+        mmr_threshold=0.85,
+        description="Conservative pruning preserving clauses and numbers",
+    ),
+    "rag-context": CompressionProfile(
+        name="RAG Context",
+        keep_fraction=0.4,
+        protect_blocks=["code", "table"],
+        instruction_sensitivity=0.8,
+        strip_filler=True,
+        mmr_threshold=0.65,
+        description="Aggressive redundancy pruning for retrieved chunks",
+    ),
+}
+
+
+def get_profile(name: str | CompressionProfile) -> CompressionProfile:
+    """Retrieve a compression profile by name, falling back to chat-prompt."""
+    if isinstance(name, CompressionProfile):
+        return name
+    return PROFILES.get(name, PROFILES["chat-prompt"])
+
