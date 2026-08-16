@@ -41,7 +41,7 @@
       domains: ["gemini.google.com"],
       selectors: {
         input: 'div.ql-editor[contenteditable="true"], rich-textarea div[contenteditable="true"], textarea',
-        anchor: 'chat-window, .input-area, form',
+        anchor: 'input-area-v2, .input-area-container, .bottom-container, chat-window',
         sendButton: 'button.send-button, button[aria-label="Send message"]'
       }
     },
@@ -222,6 +222,14 @@
     var p = PROVIDERS[currentProvider];
     if (!p) return null;
 
+    if (currentProvider === "gemini") {
+      // In Gemini, anchor above the outermost input area container
+      var geminiOuter = textBox.closest("input-area-v2, .input-area-container, .bottom-container, div[class*='input-area-container']");
+      if (geminiOuter) return geminiOuter;
+      var chatWindow = textBox.closest("chat-window");
+      if (chatWindow) return chatWindow;
+    }
+
     var form = textBox.closest("form");
     if (form) return form;
 
@@ -244,6 +252,7 @@
 
   var SHADOW_STYLES = [
     ":host { all: initial; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; font-size: 11px; color: #ededf0; overflow: visible !important; position: relative; z-index: 999999; }",
+    ":host([data-provider='gemini']) { display: flex; justify-content: flex-start; width: 100%; max-width: 840px; margin: 0 auto 6px auto; padding: 0 16px; box-sizing: border-box; }",
     ".td-host-wrap { position: relative; display: inline-flex; align-items: center; margin: 3px 0; overflow: visible !important; }",
     
     "/* Minimal Black & White Trigger Button */",
@@ -332,6 +341,7 @@
     var host = document.createElement("div");
     host.id = "prompttrim-toolbar-host";
     host.setAttribute("data-prompttrim", "true");
+    host.setAttribute("data-provider", currentProvider || "");
 
     var shadow = host.attachShadow({ mode: "open" });
     var style = document.createElement("style");
