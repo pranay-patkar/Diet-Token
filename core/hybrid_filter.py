@@ -20,15 +20,19 @@ def _char_ngrams(text: str, n: int = 3) -> list[str]:
     clean = text.lower()
     return [clean[i:i+n] for i in range(len(clean) - n + 1)]
 
+_ENTITY_RE = re.compile(r"\b(?:\d+(?:\.\d+)?(?:%|ms|s|gb|mb|kb|tb|usd|\$|x)?|[A-Z][a-z0-9]+)\b")
+
 class HybridPreFilter(BM25PreFilter):
     """
-    Hybrid pre-filter combining BM25 lexical matching with character n-gram overlap.
+    Hybrid pre-filter combining BM25 lexical matching with character n-gram overlap
+    and query constraint / named-entity multipliers.
     Prevents pre-filter drops when paraphrased answers share character roots or patterns.
     """
 
     def score_hybrid(self, query: str, sentences: list[Sentence]) -> dict[int, float]:
         bm25_scores = self.score(query, sentences)
         query_ngrams = set(_char_ngrams(query, n=3))
+        query_entities = set(_ENTITY_RE.findall(query.lower()))
         
         hybrid_scores = {}
         for s in sentences:
@@ -41,9 +45,17 @@ class HybridPreFilter(BM25PreFilter):
                 ngram_overlap = len(query_ngrams & s_ngrams) / float(len(query_ngrams))
             else:
                 ngram_overlap = 0.0
+
+            # Constraint / Entity multiplier
+            s_entities = set(_ENTITY_RE.findall(s.text.lower()))
+            entity_boost = 1.0
+            if query_entities and s_entities:
+                matching_entities = len(query_entities & s_entities)
+                if matching_entities > 0:
+                    entity_boost += 0.4 * matching_entities
                 
-            # Combine BM25 score with n-gram semantic baseline
-            hybrid_scores[s_id] = bm25_val + (ngram_overlap * 2.5)
+            # Combine BM25 score with n-gram semantic baseline and entity boost
+            hybrid_scores[s_id] = (bm25_val + (ngram_overlap * 2.5)) * entity_boost
             
         return hybrid_scores
 

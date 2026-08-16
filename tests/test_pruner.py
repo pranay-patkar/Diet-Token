@@ -71,3 +71,29 @@ def test_floor_reason_when_score_is_zero_but_kept():
     kept = [d for d in decisions if d.kept]
     assert len(kept) == 1
     assert kept[0].reason == "floor_minimum"
+
+
+def test_anaphora_preservation():
+    # Sentence 1 starts with "It" and has high score; Sentence 0 has lower score
+    s0 = ScoredSentence(sentence=Sentence(text="Token-Diet is a context compression engine.", index=0, chunk_id=0), score=0.2, scorer_name="test")
+    s1 = ScoredSentence(sentence=Sentence(text="It reduces token latency by over 50%.", index=1, chunk_id=0), score=0.9, scorer_name="test")
+    s2 = ScoredSentence(sentence=Sentence(text="Unrelated background filler.", index=2, chunk_id=0), score=0.1, scorer_name="test")
+
+    decisions = prune_sentences([s0, s1, s2], keep_fraction=0.34, min_keep_per_chunk=1, mode="cherry-pick", preserve_anaphora=True)
+    kept_indices = {d.scored_sentence.index for d in decisions if d.kept}
+    # Anaphora retention should preserve both sentence 1 AND antecedent sentence 0
+    assert 1 in kept_indices
+    assert 0 in kept_indices
+    assert 2 not in kept_indices
+
+
+def test_strip_filler_words_and_hedges():
+    from core.pruner import strip_filler_words
+    text = "It is important to note that basically in order to reduce latency [1], we deploy local scoring."
+    cleaned = strip_filler_words(text)
+    assert "It is important to note that" not in cleaned
+    assert "basically" not in cleaned
+    assert "in order to" not in cleaned
+    assert "[1]" not in cleaned
+    assert "to reduce latency, we deploy local scoring." in cleaned.lower()
+

@@ -9,13 +9,18 @@ Take a prompt or a chunk of retrieved text. Score every sentence against the que
 
 *No vector DB needed. No extra LLM call to compress. Every sentence is scored and pruned before it ever reaches the model.*
 
-`Pipeline` `Two-Stage` &nbsp; `Pre-filter` `Hybrid (BM25 + 3-gram)` &nbsp; `Scorer` `Cross-Encoder` &nbsp; `Chrome Extension` `Inline Composer` &nbsp; `Validation` `5/5 passing` &nbsp; `Tests` `29 passing` &nbsp; `License` `MIT`
+`Pipeline` `Two-Stage` &nbsp; `Pre-filter` `Hybrid (BM25 + 3-gram)` &nbsp; `Scorer` `Cross-Encoder` &nbsp; `Chrome Extension` `Inline Composer` &nbsp; `Validation` `5/5 passing` &nbsp; `Tests` `32 passing` &nbsp; `License` `MIT`
 
 ---
 
 ## 🚀 Features
 
 - **⚡ Two-Stage Sentence Relevance Engine**: Fast hybrid lexical filter + cross-encoder ranker that prevents paraphrase drops.
+- **🛡️ Referential & Anaphoric Anchoring**: Automatically detects pronoun starters (`it`, `this`, `that`, `they`, `such`) and preserves antecedent context sentences.
+- **📦 Atomic Code & Table Block Isolation**: Isolates markdown code fences and tables so syntax is never mangled during sentence splitting.
+- **🔄 Maximal Marginal Relevance (MMR) Deduplication**: Penalizes redundant sentences across retrieved chunks to ensure information density.
+- **🔢 Entity & Constraint Multipliers**: Protects numbers, percentages, currencies, and technical units from being pruned.
+- **✂️ Discourse Hedge & Filler Micro-Pruning**: Strips rhetorical padding (*"It is important to note that"*, *"in order to"* → *"to"*, citations `[1]`, filler adverbs) while keeping facts intact.
 - **🧩 Browser Extension (Capsule Hub / Tally Style)**: Mounts an inline **✂ Diet-Token** toolbar directly on ChatGPT, Claude, Gemini, DeepSeek, and Perplexity composers.
 - **🌐 Interactive Web Playground**: Dark-mode visualizer with real-time token count, cost savings, latency metrics, and sentence heatmaps.
 - **🛡️ 100% Client-Side / Local**: Runs on-device with zero external API dependencies or token leakage.

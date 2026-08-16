@@ -59,3 +59,19 @@ def test_quoted_sentence_boundary():
     assert len(sentences) >= 1
     joined = " ".join(s.text for s in sentences)
     assert "stop" in joined and "left" in joined
+
+
+def test_atomic_code_and_table_preservation():
+    text = (
+        "Here is a sample function:\n\n"
+        "```python\n"
+        "def compute(val.x):\n"
+        "    return val.x * 2.0\n"
+        "```\n\n"
+        "It executes in under 2ms."
+    )
+    sentences = split_sentences(text)
+    assert len(sentences) == 3
+    assert "```python" in sentences[1].text
+    assert "return val.x * 2.0" in sentences[1].text
+

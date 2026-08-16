@@ -28,9 +28,8 @@ _ABBREVIATIONS = {
     "fig", "no", "vol", "approx", "dept",
 }
 
-# Matches sentence-ending punctuation followed by whitespace and a capital
-# letter / opening quote / digit — a reasonable boundary heuristic.
-_SENTENCE_BOUNDARY = re.compile(r'(?<=[.!?])\s+(?=[A-Z0-9"\u201c\u2018(])')
+# Matches sentence-ending punctuation or paragraph boundaries followed by capital / digit / quote / atomic placeholder
+_SENTENCE_BOUNDARY = re.compile(r'(?<=[.!?])\s+(?=[A-Z0-9"\u201c\u2018(_])|\n\s*\n+')
 
 _WORD_BEFORE_PERIOD = re.compile(r'(\b[A-Za-z]+)\.\s*$')
 
@@ -42,14 +41,55 @@ def _looks_like_abbreviation(preceding_text: str) -> bool:
     return match.group(1).lower() in _ABBREVIATIONS
 
 
+def _extract_atomic_blocks(text: str) -> tuple[str, dict[str, str]]:
+    """
+    Extracts markdown code blocks and tables into placeholders so sentence splitting
+    does not break code syntax or tabular structures.
+    """
+    placeholders: dict[str, str] = {}
+    counter = 0
+
+    # 1. Fenced code blocks ```...```
+    def replace_code_block(match):
+        nonlocal counter
+        ph = f"__ATOMIC_BLOCK_{counter}__"
+        counter += 1
+        placeholders[ph] = match.group(0)
+        return f"\n\n{ph}.\n\n"
+
+    clean = re.sub(r"```[\s\S]*?```", replace_code_block, text)
+
+    # 2. Markdown tables (| col | col | ... \n | --- | --- | ...)
+    def replace_table(match):
+        nonlocal counter
+        ph = f"__ATOMIC_BLOCK_{counter}__"
+        counter += 1
+        placeholders[ph] = match.group(0)
+        return f"\n\n{ph}.\n\n"
+
+    clean = re.sub(r"(?:^[ \t]*\|.+?\|\s*$\n?){2,}", replace_table, clean, flags=re.MULTILINE)
+    return clean, placeholders
+
+
+def _restore_atomic_blocks(text: str, placeholders: dict[str, str]) -> str:
+    restored = text
+    for ph, orig in placeholders.items():
+        # Handle both ph with trailing dot or raw ph
+        restored = restored.replace(f"{ph}.", orig)
+        restored = restored.replace(ph, orig)
+    return restored
+
+
 def _split_regex(text: str) -> list[str]:
-    """Regex-based sentence splitter with light abbreviation handling."""
+    """Regex-based sentence splitter with abbreviation and atomic block handling."""
     text = text.strip()
     if not text:
         return []
 
-    # First pass: naive split on the boundary regex.
-    raw_pieces = _SENTENCE_BOUNDARY.split(text)
+    clean_text, placeholders = _extract_atomic_blocks(text)
+
+    # First pass: naive split on sentence/paragraph boundaries
+    raw_pieces = [p.strip() for p in _SENTENCE_BOUNDARY.split(clean_text) if p and p.strip()]
 
     # Second pass: stitch back together any split that occurred right after
     # a known abbreviation (the naive regex can't see across the split).
@@ -64,7 +104,7 @@ def _split_regex(text: str) -> list[str]:
     if buffer:
         sentences.append(buffer)
 
-    return [s.strip() for s in sentences if s.strip()]
+    return [_restore_atomic_blocks(s.strip(), placeholders) for s in sentences if s.strip()]
 
 
 def _split_spacy(text: str, nlp) -> list[str]:
