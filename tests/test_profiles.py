@@ -1,5 +1,5 @@
 """
-Unit tests for Token-Diet named compression profiles.
+Unit tests for PromptTrim named compression profiles.
 """
 
 from __future__ import annotations

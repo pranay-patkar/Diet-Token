@@ -1,7 +1,7 @@
 """
 scripts/validate_scorer.py
 
-Validation harness for the two-stage Token-Diet scoring pipeline
+Validation harness for the two-stage PromptTrim scoring pipeline
 (core/scorer.py: BM25PreFilter + CrossEncoderScorer).
 
 Runs 5 hand-picked test cases, each built around *lexical mismatch* —
@@ -145,7 +145,7 @@ def run_case(
 
 
 def main():
-    print("Token-Diet — Scorer Validation (Hybrid Pre-Filter Enabled)")
+    print("PromptTrim — Scorer Validation (Hybrid Pre-Filter Enabled)")
     print(f"Config: keep_fraction={KEEP_FRACTION}, min_keep={MIN_KEEP}")
     print("Loading cross-encoder...")
 

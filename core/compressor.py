@@ -1,5 +1,5 @@
 """
-Orchestrates the full Token-Diet compression pipeline for a single query
+Orchestrates the full PromptTrim compression pipeline for a single query
 against one or more retrieved chunks:
 
     chunks -> split_sentences -> score_sentences -> prune_sentences -> reassemble

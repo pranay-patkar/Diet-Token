@@ -1,5 +1,5 @@
 """
-Shared dataclasses for the Token-Diet compression pipeline.
+Shared dataclasses for the PromptTrim compression pipeline.
 
 Nothing in this file talks to a model, an API, or a database — it's just the
 shapes that flow between core/sentence_split.py -> scorer.py -> pruner.py ->

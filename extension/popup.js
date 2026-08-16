@@ -1,12 +1,12 @@
 /**
- * Token-Diet popup — compact stats panel.
+ * PromptTrim popup — compact stats panel.
  * The main compression flow happens in-page (content script button inside
  * the text box); this popup is only for quick paste-and-compress with stats.
  */
 (function () {
   "use strict";
 
-  var engine = window.TokenDiet;
+  var engine = window.PromptTrim || window.TokenDiet;
   if (!engine) return;
 
   var settings = Object.assign({}, engine.DEFAULTS);

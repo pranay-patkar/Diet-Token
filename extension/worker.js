@@ -1,5 +1,5 @@
 /**
- * Token-Diet Web Worker — offloads compression from main thread.
+ * PromptTrim Web Worker — offloads compression from main thread.
  * Imports engine.js logic for Worker context.
  */
 "use strict";
@@ -7,7 +7,7 @@
 try {
   importScripts("tokenizer.js", "instruction-detector.js", "diff.js", "engine.js");
 } catch (e) {
-  console.error("[Token-Diet Worker] Error importing scripts:", e);
+  console.error("[PromptTrim Worker] Error importing scripts:", e);
 }
 
 self.onmessage = function (e) {
@@ -16,11 +16,12 @@ self.onmessage = function (e) {
 
   var t0 = performance.now();
   try {
-    if (!self.TokenDiet || !self.TokenDiet.compress) {
-      throw new Error("TokenDiet engine is not initialized in worker");
+    var engine = self.PromptTrim || self.TokenDiet;
+    if (!engine || !engine.compress) {
+      throw new Error("PromptTrim engine is not initialized in worker");
     }
 
-    var res = self.TokenDiet.compress(msg.text, msg.query, {
+    var res = engine.compress(msg.text, msg.query, {
       keepFraction: msg.keepFraction,
       model: msg.model || "default",
       fidelityMode: msg.fidelityMode || false,

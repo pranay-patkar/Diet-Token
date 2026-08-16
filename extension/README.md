@@ -1,6 +1,6 @@
-# Token-Diet — Browser Extension
+# PromptTrim — Browser Extension
 
-The one-click companion to the Token-Diet dashboard. Compresses text **inside any
+The one-click companion to the PromptTrim dashboard. Compresses text **inside any
 website text box** — ChatGPT, Claude, Gmail, or any page — before it reaches the
 LLM, using the exact same two-stage scoring philosophy as the core pipeline:
 
@@ -27,10 +27,10 @@ Plus Jakarta Sans + JetBrains Mono).
 
 | Trigger | What happens |
 |---|---|
-| **Focus any text box with text** | A `✂ Token-Diet` pill appears **inside the box's bottom-right corner** (Compose AI / Capsule Hub style). Click it to compress the whole box in place. Select a passage first → it compresses just that selection. |
+| **Focus any text box with text** | A `✂ PromptTrim` pill appears **inside the box's bottom-right corner** (Compose AI / Capsule Hub style). Click it to compress the whole box in place. Select a passage first → it compresses just that selection. |
 | **Result strip** | After compression, a small bar appears under the field: **% saved · tokens · ms**, a **L/B/A level picker** (Light/Balanced/Aggressive), and one-click **Undo**. |
 | **Alt+Shift+T** | Compresses the currently focused text box from anywhere. |
-| **Right-click a selection → "Compress with Token-Diet"** | Replaces editable selections in place; copies to clipboard on plain page text. |
+| **Right-click a selection → "Compress with PromptTrim"** | Replaces editable selections in place; copies to clipboard on plain page text. |
 | **Extension popup (small stats panel)** | Quick paste-and-compress with the dashboard stats: compression ratio, tokens before→after, est. TTFT drop (ms), cost saved. **Copy** the result. |
 
 > The whole compression flow is in-page — no popup needed, so the chat box
@@ -63,13 +63,13 @@ extension/
 The most common causes, in order:
 
 1. **Extension not reloaded after edits.** Go to `chrome://extensions` → click the
-   **reload (↻)** icon on the Token-Diet card.
+   **reload (↻)** icon on the PromptTrim card.
 2. **Page not refreshed.** Content scripts only re-run on page load — after
    reloading the extension, **refresh the chat page** (Ctrl+Shift+R).
 3. **Incognito window.** Extensions are disabled in incognito unless you tick
    "Allow in Incognito" on the extension details page.
 4. **Verify the script ran:** press F12 → Console → you should see
-   `[Token-Diet] content script injected v1.2.0`, and typing `__TD_DEBUG`
+   `[PromptTrim] content script injected v1.2.0`, and typing `__TD_DEBUG`
    shows `{ injected: true, lastEditable: ... }`. If `lastError` is set,
    report it. If there's no log line at all, the script didn't run on that
    page (wrong URL / page cached — hard-refresh).

@@ -75,7 +75,7 @@ def test_floor_reason_when_score_is_zero_but_kept():
 
 def test_anaphora_preservation():
     # Sentence 1 starts with "It" and has high score; Sentence 0 has lower score
-    s0 = ScoredSentence(sentence=Sentence(text="Token-Diet is a context compression engine.", index=0, chunk_id=0), score=0.2, scorer_name="test")
+    s0 = ScoredSentence(sentence=Sentence(text="PromptTrim is a context compression engine.", index=0, chunk_id=0), score=0.2, scorer_name="test")
     s1 = ScoredSentence(sentence=Sentence(text="It reduces token latency by over 50%.", index=1, chunk_id=0), score=0.9, scorer_name="test")
     s2 = ScoredSentence(sentence=Sentence(text="Unrelated background filler.", index=2, chunk_id=0), score=0.1, scorer_name="test")
 

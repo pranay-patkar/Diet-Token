@@ -1,17 +1,17 @@
 /**
- * Token-Diet background service worker:
+ * PromptTrim background service worker:
  *  - right-click context menu on any text selection
  *  - keyboard shortcut (Alt+Shift+T) for the focused text box
  * Both just relay a message to the content script, which owns the UI.
  */
 
-const MENU_ID = "token-diet-compress-selection";
+const MENU_ID = "prompttrim-compress-selection";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: MENU_ID,
-      title: "Compress with Token-Diet",
+      title: "Compress with PromptTrim",
       contexts: ["selection"]
     });
   });

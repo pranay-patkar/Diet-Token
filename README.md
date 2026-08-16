@@ -3,7 +3,7 @@
 █▄▄ █▀█ █░▀█ █▄▀ █ █▄▀ █▀█ ░█░ ██▄   ▄█ █▄█ ██▄ ██▄ ░█░ ▄█
 ```
 
-# ✂️ Token-Diet: Dynamic Context Compressor for RAG & AI Prompts
+# ✂️ PromptTrim: Dynamic Context Compressor for RAG & AI Prompts
 
 > **Post-retrieval optimization pipeline and in-browser AI prompt compressor.**  
 > Strips filler sentences, rhetorical hedges, and redundant fluff before text ever reaches the LLM context window — slashing Time-To-First-Token (TTFT) latency and API costs while guaranteeing zero factual context loss.
@@ -15,7 +15,7 @@
 ## 🎯 The Problem & The Solution
 
 - **The Problem:** Traditional RAG engines pass entire multi-paragraph retrieved chunks directly into the LLM context window. This balloons **Time-To-First-Token (TTFT)** latency and inflates API costs because models waste compute processing hundreds of irrelevant filler words, discourse hedges, and boilerplate disclaimers. Furthermore, generic compressors over-weight lexical rarity and silently drop crucial procedural specs, constraints, and hex codes.
-- **The Solution:** **Token-Diet** acts as a lightweight, fast, and local compression gatekeeper. Once chunks are retrieved (or written in an AI prompt box), Token-Diet evaluates every sentence through a **Universal Fidelity** multi-signal scoring pipeline, protects critical instructions and constraints, keeps only dense, high-information semantic sentences, and micro-prunes conversational padding.
+- **The Solution:** **PromptTrim** acts as a lightweight, fast, and local compression gatekeeper. Once chunks are retrieved (or written in an AI prompt box), PromptTrim evaluates every sentence through a **Universal Fidelity** multi-signal scoring pipeline, protects critical instructions and constraints, keeps only dense, high-information semantic sentences, and micro-prunes conversational padding.
 
 ---
 
@@ -47,7 +47,7 @@
 - **✂️ Conservative Fluff Micro-Pruning**:
   - Removes rhetorical filler (*"It is important to note that"*, *"in order to"* → *"to"*, citations `[1][2]`, filler adverbs) while protecting action verbs and technical references.
 - **🧩 Manifest V3 Chrome Extension (Capsule Hub / Tally Style)**:
-  - Mounts an inline **✂ Diet-Token** toolbar inside the native composer forms of ChatGPT, Claude, Gemini, DeepSeek, and Perplexity with Shadow DOM styling, Profile selector, Fidelity toggle, and tabbed Breakdown & Diff inspector.
+  - Mounts an inline **✂ PromptTrim** toolbar inside the native composer forms of ChatGPT, Claude, Gemini, DeepSeek, and Perplexity with Shadow DOM styling, Profile selector, Fidelity toggle, and tabbed Breakdown & Diff inspector.
 - **🌐 Dark Dashboard & Live Playground**:
   - Visual dashboard with token gauges, compression ratios, estimated cost savings, TTFT latency drops, and interactive sentence heatmaps.
 
@@ -111,7 +111,7 @@
 The browser extension attaches an inline compression toolbar to prompt composers across major AI chat interfaces:
 
 - **Supported Platforms**: ChatGPT, Claude.ai, Google Gemini, DeepSeek, Perplexity, and arbitrary web textareas.
-- **Shadow DOM Isolation**: Toolbar UI is rendered inside a `#token-diet-toolbar-host` Shadow Root (`:host { all: initial }`), ensuring host site Tailwind styles or dark mode CSS resets never distort the toolbar.
+- **Shadow DOM Isolation**: Toolbar UI is rendered inside a `#prompttrim-toolbar-host` Shadow Root (`:host { all: initial }`), ensuring host site Tailwind styles or dark mode CSS resets never distort the toolbar.
 - **React Value Tracker Bypass**: Directly invokes native prototype setters and dispatches `input` / `change` / `beforeinput` events so React and ProseMirror state stores immediately detect the compressed prompt.
 - **Compression Modes**:
   - **L (Light)**: Retains ~60% of top sentences.

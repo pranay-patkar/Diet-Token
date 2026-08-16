@@ -1,5 +1,5 @@
 /**
- * Token-Diet Dynamic Context Compressor — in-browser compression engine.
+ * PromptTrim Dynamic Context Compressor — in-browser compression engine.
  *
  * Universal Fidelity Compression Engine:
  * - Atomic block protection (Code, Tables, Numbered/Bulleted Lists, Blockquotes, YAML, Technical Inline Code)
@@ -626,7 +626,7 @@
     profile: "chat-prompt"
   };
 
-  global.TokenDiet = {
+  var api = {
     compress: compress,
     splitSentences: splitSentences,
     countTokens: countTokens,
@@ -638,4 +638,7 @@
     getProfile: getProfile,
     DEFAULTS: DEFAULTS
   };
+
+  global.PromptTrim = api;
+  global.TokenDiet = api; // alias for backwards compatibility
 })(typeof window !== "undefined" ? window : (typeof self !== "undefined" ? self : this));

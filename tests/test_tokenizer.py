@@ -1,5 +1,5 @@
 """
-Unit tests for Token-Diet token estimation and model calibration.
+Unit tests for PromptTrim token estimation and model calibration.
 """
 
 from __future__ import annotations

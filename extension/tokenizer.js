@@ -1,5 +1,5 @@
 /**
- * Token-Diet Tokenizer — lightweight BPE pre-tokenizer matching cl100k_base.
+ * PromptTrim Tokenizer — lightweight BPE pre-tokenizer matching cl100k_base.
  * Uses GPT-4's regex pre-tokenization rules + byte-level approximation.
  * No external vocab file required; ~95% accurate vs tiktoken.
  */

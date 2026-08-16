@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Token-Diet Dynamic Context Compressor — Post-Retrieval RAG Optimizer & In-Field Prompt Compressor</title>
+    <title>PromptTrim Dynamic Context Compressor — Post-Retrieval RAG Optimizer & In-Field Prompt Compressor</title>
 
     <!-- Tailwind CSS with custom theme token extensions -->
     <script>
@@ -49,7 +49,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js" defer></script>
 
-    <!-- Token-Diet Local Engine Modules -->
+    <!-- PromptTrim Local Engine Modules -->
     <script src="extension/tokenizer.js" defer></script>
     <script src="extension/instruction-detector.js" defer></script>
     <script src="extension/diff.js" defer></script>
@@ -216,7 +216,7 @@
         
         <!-- Top Logo & Core Navigation Icons -->
         <div class="flex flex-col items-center space-y-6 w-full">
-            <div class="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg shadow-lg cursor-pointer hover:scale-105 transition-transform" onclick="switchMainTab('overview')" title="Token-Diet Dashboard">
+            <div class="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg shadow-lg cursor-pointer hover:scale-105 transition-transform" onclick="switchMainTab('overview')" title="PromptTrim Dashboard">
                 <i data-lucide="scissors" class="w-5 h-5 text-black"></i>
             </div>
 
@@ -295,7 +295,7 @@
                     <i data-lucide="scissors" class="w-4 h-4 text-black"></i>
                 </div>
                 <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400 hidden sm:inline-block shrink-0"></i>
-                <span class="text-xs sm:text-sm font-semibold text-white tracking-tight truncate" id="header-page-title">Token-Diet Compressor Dashboard</span>
+                <span class="text-xs sm:text-sm font-semibold text-white tracking-tight truncate" id="header-page-title">PromptTrim Compressor Dashboard</span>
                 <span class="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-semibold hidden md:inline-block shrink-0">RAG Optimizer</span>
             </div>
 
@@ -390,7 +390,7 @@
                                     </span>
                                 </div>
                                 <p class="text-xs text-dash-muted mt-1 font-sans">
-                                    Overall Token-Diet Savings · <span id="funnel-kept-stat" class="text-gray-200 font-mono">160 BPE tokens kept</span> from <span id="funnel-raw-stat" class="text-gray-400 font-mono">560 raw tokens</span>
+                                    Overall PromptTrim Savings · <span id="funnel-kept-stat" class="text-gray-200 font-mono">160 BPE tokens kept</span> from <span id="funnel-raw-stat" class="text-gray-400 font-mono">560 raw tokens</span>
                                 </p>
                             </div>
                             <div class="sm:text-right">
@@ -798,7 +798,7 @@
                         <div>
                             <div class="flex items-center space-x-2">
                                 <i data-lucide="cpu" class="w-5 h-5 text-emerald-400"></i>
-                                <h2 class="text-base sm:text-lg font-bold text-white font-mono">Token-Diet Dynamic Compression Playground</h2>
+                                <h2 class="text-base sm:text-lg font-bold text-white font-mono">PromptTrim Dynamic Compression Playground</h2>
                             </div>
                             <p class="text-xs text-dash-muted mt-1">
                                 Test in-browser compression powered by BPE token estimation, instruction detection, hybrid BM25, and semantic MMR.
@@ -1021,7 +1021,7 @@
                         <div>
                             <h2 class="text-lg sm:text-xl font-bold text-white font-mono">Domain Compression Profiles</h2>
                             <p class="text-xs text-dash-muted mt-1">
-                                Token-Diet adapts its scoring weights, instruction sensitivity, and block protection rules to match specific prompt formats.
+                                PromptTrim adapts its scoring weights, instruction sensitivity, and block protection rules to match specific prompt formats.
                             </p>
                         </div>
                         <span class="tag-pill bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 self-start sm:self-auto">4 Domain Presets</span>
@@ -1163,7 +1163,7 @@
                             <h2 class="text-base sm:text-lg font-bold text-white font-mono">Time-to-First-Token (TTFT) &amp; Latency Drop Telemetry</h2>
                         </div>
                         <p class="text-xs text-dash-muted mt-1">
-                            Comparison of TTFT latency and API inference overhead across raw uncompressed prompts vs. Token-Diet dense context.
+                            Comparison of TTFT latency and API inference overhead across raw uncompressed prompts vs. PromptTrim dense context.
                         </p>
                     </div>
 
@@ -1204,7 +1204,7 @@
                     <div>
                         <div class="flex items-center space-x-2">
                             <i data-lucide="git-merge" class="w-5 h-5 text-emerald-400"></i>
-                            <h2 class="text-base sm:text-lg font-bold text-white font-mono">Token-Diet 2-Stage Compression Architecture</h2>
+                            <h2 class="text-base sm:text-lg font-bold text-white font-mono">PromptTrim 2-Stage Compression Architecture</h2>
                         </div>
                         <p class="text-xs text-dash-muted mt-1">
                             Designed to eliminate LLM prompt bloat while providing mathematical guarantees against silent instruction dropping.
@@ -1263,7 +1263,7 @@
                         <div class="p-3 bg-[#0D0D11] border border-[#282836] rounded-xl flex flex-wrap items-center justify-between gap-3 max-w-xl mx-auto shadow-2xl">
                             <div class="flex items-center space-x-2">
                                 <i data-lucide="scissors" class="w-3.5 h-3.5 text-emerald-400"></i>
-                                <span class="text-xs font-bold text-emerald-400 font-mono">Token-Diet</span>
+                                <span class="text-xs font-bold text-emerald-400 font-mono">PromptTrim</span>
                                 <span class="tag-pill bg-emerald-500/20 text-emerald-300 font-mono text-[10px]">71% Saved</span>
                             </div>
 
@@ -1328,7 +1328,7 @@
             <button onclick="closeModal()" class="absolute top-4 right-4 text-dash-muted hover:text-white touch-target flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
             <div class="space-y-1.5 pr-6">
                 <h3 class="text-base font-bold text-white font-mono" id="modal-title">Settings Dialog</h3>
-                <p class="text-xs text-dash-muted" id="modal-desc">Configure Token-Diet Compression Parameters.</p>
+                <p class="text-xs text-dash-muted" id="modal-desc">Configure PromptTrim Compression Parameters.</p>
             </div>
 
             <form onsubmit="handleModalSubmit(event)" class="space-y-4 text-xs font-mono">
@@ -1477,7 +1477,7 @@
             targetView.classList.remove('hidden');
 
             const titles = {
-                overview: 'Token-Diet Compressor Dashboard',
+                overview: 'PromptTrim Compressor Dashboard',
                 playground: 'Live Interactive Playground',
                 profiles: 'Domain Compression Profiles',
                 validation: 'Ground-Truth Scorer Validation',
@@ -1485,7 +1485,7 @@
                 architecture: '2-Stage Pipeline Architecture'
             };
 
-            document.getElementById('header-page-title').innerText = titles[tabName] || 'Token-Diet Dashboard';
+            document.getElementById('header-page-title').innerText = titles[tabName] || 'PromptTrim Dashboard';
             safeInitIcons();
         }
 
@@ -1573,7 +1573,7 @@
                                 borderDash: [5, 5]
                             },
                             {
-                                label: 'Token-Diet Dense Context (TTFT ms)',
+                                label: 'PromptTrim Dense Context (TTFT ms)',
                                 data: [80, 140, 250, 460, 890, 1650],
                                 borderColor: '#34d399',
                                 backgroundColor: 'rgba(52, 211, 153, 0.1)',
@@ -1701,10 +1701,12 @@
         }
 
         function countTokensEngine(text) {
-            if (typeof window.TokenDietTokenizer !== 'undefined' && typeof window.TokenDietTokenizer.countTokens === 'function') {
-                return window.TokenDietTokenizer.countTokens(text);
-            } else if (typeof window.TokenDiet !== 'undefined' && typeof window.TokenDiet.countTokens === 'function') {
-                return window.TokenDiet.countTokens(text);
+            var tokEngine = window.PromptTrimTokenizer || window.TokenDietTokenizer;
+            var compEngine = window.PromptTrim || window.TokenDiet;
+            if (typeof tokEngine !== 'undefined' && typeof tokEngine.countTokens === 'function') {
+                return tokEngine.countTokens(text);
+            } else if (typeof compEngine !== 'undefined' && typeof compEngine.countTokens === 'function') {
+                return compEngine.countTokens(text);
             }
             if (!text.trim()) return 0;
             return Math.max(1, Math.round(text.trim().split(/\s+/).length * 1.3));
@@ -1727,9 +1729,10 @@
 
             const startTime = performance.now();
 
+            var compEngine = window.PromptTrim || window.TokenDiet;
             let res;
-            if (typeof window.TokenDiet !== 'undefined' && typeof window.TokenDiet.compress === 'function') {
-                res = window.TokenDiet.compress(text, {
+            if (typeof compEngine !== 'undefined' && typeof compEngine.compress === 'function') {
+                res = compEngine.compress(text, {
                     query: query || undefined,
                     profile: currentPlaygroundSettings.profile,
                     keepFraction: currentPlaygroundSettings.keepFraction,

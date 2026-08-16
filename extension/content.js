@@ -1,5 +1,5 @@
 /**
- * Token-Diet Content Script (Capsule Hub / Tally Architecture).
+ * PromptTrim Content Script (Capsule Hub / Tally Architecture).
  *
  * Implements direct inline DOM injection onto AI chatboxes (ChatGPT, Claude,
  * Gemini, DeepSeek, Perplexity, and general web textareas).
@@ -40,90 +40,91 @@
       name: "Gemini",
       domains: ["gemini.google.com"],
       selectors: {
-        input: 'rich-textarea div[contenteditable="true"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"]',
-        anchor: 'rich-textarea, .input-area-container, form, div[class*="chat-input"]',
-        sendButton: 'button[aria-label="Send message"], button[aria-label="Send"]'
+        input: 'div.ql-editor[contenteditable="true"], rich-textarea div[contenteditable="true"], textarea',
+        anchor: 'chat-window, .input-area, form',
+        sendButton: 'button.send-button, button[aria-label="Send message"]'
       }
     },
     deepseek: {
       name: "DeepSeek",
       domains: ["deepseek.com"],
       selectors: {
-        input: '#chat-input, textarea[placeholder*="message" i], textarea[placeholder*="Ask" i], div[contenteditable="true"]',
-        anchor: 'div[class*="input-box"], form, div[class*="chat-input"]',
-        sendButton: 'button[class*="send"], div[class*="send"]'
+        input: 'textarea[placeholder*="DeepSeek"], textarea#chat-input, textarea',
+        anchor: 'div[class*="chat-input"], form',
+        sendButton: 'div[role="button"][aria-label="Send"], button[class*="send"]'
       }
     },
     perplexity: {
       name: "Perplexity",
       domains: ["perplexity.ai"],
       selectors: {
-        input: 'textarea[id*="input"], textarea[placeholder*="Ask" i], div[contenteditable="true"]',
-        anchor: 'div[class*="search-bar"], form, div[class*="bottom-"]',
-        sendButton: 'button[aria-label="Submit"], button[aria-label="Ask"]'
+        input: 'textarea[placeholder*="Ask"], textarea',
+        anchor: 'div[class*="bottom-0"], form',
+        sendButton: 'button[aria-label="Submit"]'
       }
     },
     copilot: {
       name: "Copilot",
-      domains: ["copilot.microsoft.com", "bing.com"],
+      domains: ["copilot.microsoft.com"],
       selectors: {
-        input: 'textarea[id*="userInput"], textarea, div[contenteditable="true"]',
-        anchor: 'form, div[class*="input-area"], div[class*="composer"]',
-        sendButton: 'button[aria-label*="Submit" i], button[aria-label*="Send" i]'
-      }
-    },
-    mistral: {
-      name: "Mistral",
-      domains: ["mistral.ai"],
-      selectors: {
-        input: 'textarea, div[contenteditable="true"]',
-        anchor: 'form, div[class*="chat-input"]',
-        sendButton: 'button[type="submit"]'
+        input: 'textarea#userInput, textarea[placeholder*="Message"], textarea',
+        anchor: 'form, div[class*="input-container"]',
+        sendButton: 'button[aria-label="Submit"], button[title="Submit"]'
       }
     },
     poe: {
       name: "Poe",
       domains: ["poe.com"],
       selectors: {
-        input: 'textarea[class*="ChatMessageInput"], textarea',
-        anchor: 'footer, form, div[class*="ChatMessageInputContainer"]',
-        sendButton: 'button[class*="sendButton"]'
+        input: 'textarea[class*="ChatMessageInput_textInput"], textarea',
+        anchor: 'footer, form',
+        sendButton: 'button[class*="ChatMessageSendButton_sendButton"]'
       }
     },
-    local: {
-      name: "Local AI (OpenWebUI / Ollama)",
-      domains: ["localhost", "127.0.0.1", "0.0.0.0", "hf.co", "huggingface.co"],
+    mistral: {
+      name: "Mistral",
+      domains: ["mistral.ai"],
       selectors: {
-        input: '#chat-textarea, textarea[placeholder*="message" i], textarea[placeholder*="prompt" i], textarea, div[contenteditable="true"]',
-        anchor: 'form, div[class*="chat-input"], div[class*="input-area"]',
-        sendButton: 'button[type="submit"], button[aria-label*="Send" i]'
+        input: 'textarea[placeholder*="Ask"], textarea',
+        anchor: 'form, div[class*="chat-input"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    huggingchat: {
+      name: "HuggingChat",
+      domains: ["huggingface.co/chat", "hf.co/chat"],
+      selectors: {
+        input: 'textarea[placeholder*="Ask anything"], textarea',
+        anchor: 'form, div[class*="input-container"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    localhost: {
+      name: "Localhost Demo",
+      domains: ["localhost", "127.0.0.1"],
+      selectors: {
+        input: '#demo-prompt, textarea#input-text, textarea.input, textarea',
+        anchor: '.chat-input-wrapper, form, div.card',
+        sendButton: 'button#btn-send, button.btn'
       }
     }
   };
 
-  function detectProvider() {
-    var host = (window.location.hostname || "").toLowerCase();
-    for (var key in PROVIDERS) {
-      var p = PROVIDERS[key];
-      if (p.domains.some(function (d) {
-        return host === d || host.endsWith("." + d) || host.indexOf(d) !== -1;
-      })) {
-        return key;
-      }
-    }
-    return null;
-  }
+  var hostname = window.location.hostname;
+  var currentProvider = Object.keys(PROVIDERS).find(function (k) {
+    return PROVIDERS[k].domains.some(function (d) {
+      return hostname === d || hostname.endsWith("." + d);
+    });
+  });
 
-  // Only run inline toolbar on recognized AI chatbot domains
-  var currentProvider = detectProvider();
   if (!currentProvider) {
     return;
   }
 
-  if (window.__TOKEN_DIET_INLINE__) return;
-  window.__TOKEN_DIET_INLINE__ = true;
+  if (window.__PROMPTTRIM_INLINE__) return;
+  window.__PROMPTTRIM_INLINE__ = true;
 
-  console.log("[Token-Diet] Initializing Capsule toolbar on chatbot: " + PROVIDERS[currentProvider].name);
+  console.log("[PromptTrim] Initializing Capsule toolbar on chatbot: " + PROVIDERS[currentProvider].name);
 
   var settings = {
     keepFraction: 0.5,
@@ -153,11 +154,11 @@
           }
         };
         workerInstance.onerror = function (err) {
-          console.warn("[Token-Diet] Worker error, falling back to main-thread engine:", err);
+          console.warn("[PromptTrim] Worker error, falling back to main-thread engine:", err);
           workerInstance = null;
         };
       } catch (err) {
-        console.warn("[Token-Diet] Worker unavailable:", err);
+        console.warn("[PromptTrim] Worker unavailable:", err);
         workerInstance = null;
       }
     }
@@ -165,14 +166,15 @@
   }
 
   function compressTextAsync(rawText, query, opts, callback) {
+    var engine = window.PromptTrim;
     var worker = getWorker();
     if (worker) {
       var reqId = ++workerReqId;
       var timeout = setTimeout(function () {
         if (workerCallbacks[reqId]) {
           delete workerCallbacks[reqId];
-          if (typeof window.TokenDiet !== "undefined" && window.TokenDiet.compress) {
-            var res = window.TokenDiet.compress(rawText, query, opts);
+          if (engine && engine.compress) {
+            var res = engine.compress(rawText, query, opts);
             callback(res);
           }
         }
@@ -182,8 +184,8 @@
         clearTimeout(timeout);
         if (data.success && data.result) {
           callback(data.result);
-        } else if (typeof window.TokenDiet !== "undefined" && window.TokenDiet.compress) {
-          var res = window.TokenDiet.compress(rawText, query, opts);
+        } else if (engine && engine.compress) {
+          var res = engine.compress(rawText, query, opts);
           callback(res);
         } else {
           callback({ compressed: rawText, tokensSaved: 0, error: data.error });
@@ -201,8 +203,8 @@
         profile: opts.profile,
         costPerMillion: opts.costPerMillion
       });
-    } else if (typeof window.TokenDiet !== "undefined" && window.TokenDiet.compress) {
-      var res = window.TokenDiet.compress(rawText, query, opts);
+    } else if (engine && engine.compress) {
+      var res = engine.compress(rawText, query, opts);
       callback(res);
     } else {
       callback({ compressed: rawText, tokensSaved: 0, error: "Engine not loaded" });
@@ -237,21 +239,47 @@
   var SCISSORS_ICON =
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>';
 
+  var BW_ICON =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>';
+
   var SHADOW_STYLES = [
-    ":host { all: initial; display: block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; font-size: 11px; color: #ededf0; overflow: visible !important; }",
-    ".td-bar { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; margin: 4px 0; background: #121216; border: 1px solid #2a2a36; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.45); z-index: 999999; flex-wrap: wrap; position: relative; overflow: visible !important; }",
-    ".td-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; color: #ededf0; font-weight: 600; font-size: 11px; cursor: pointer; padding: 3px 6px; border-radius: 5px; transition: background 0.15s ease, color 0.15s ease; }",
-    ".td-btn:hover { background: rgba(255,255,255,0.08); color: #ffffff; }",
+    ":host { all: initial; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; font-size: 11px; color: #ededf0; overflow: visible !important; position: relative; z-index: 999999; }",
+    ".td-host-wrap { position: relative; display: inline-flex; align-items: center; margin: 3px 0; overflow: visible !important; }",
+    
+    "/* Minimal Black & White Trigger Button */",
+    ".td-trigger-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #0c0c10; border: 1px solid #282834; border-radius: 7px; color: #ffffff; cursor: pointer; padding: 0; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.4); transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); user-select: none; position: relative; }",
+    ".td-trigger-btn:hover { background: #181822; border-color: #55556a; color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.6); transform: translateY(-1px); }",
+    ".td-trigger-btn:active { transform: scale(0.95); }",
+    ".td-trigger-btn.open { background: #1e1e28; border-color: #ffffff; box-shadow: 0 0 0 2px rgba(255,255,255,0.15), 0 4px 14px rgba(0,0,0,0.6); }",
+    ".td-trigger-btn.loading svg { animation: td-spin 1s linear infinite; }",
+    ".td-trigger-btn .td-saved-dot { position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; background: #34d399; border: 1.5px solid #0c0c10; border-radius: 50%; display: none; }",
+    ".td-trigger-btn.has-savings .td-saved-dot { display: block; }",
+    "@keyframes td-spin { 100% { transform: rotate(360deg); } }",
+
+    "/* Popup Popover Card */",
+    ".td-popover { position: absolute; bottom: calc(100% + 8px); left: 0; min-width: 320px; background: #121216; border: 1px solid #2a2a36; border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06); padding: 8px 10px; display: none; flex-direction: column; gap: 8px; z-index: 2147483647; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); animation: td-popover-pop 0.16s cubic-bezier(0.16, 1, 0.3, 1); overflow: visible !important; }",
+    ".td-popover.open { display: flex !important; }",
+    "@keyframes td-popover-pop { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }",
+
+    "/* Top Controls Row */",
+    ".td-controls-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: nowrap; }",
+    ".td-left-group { display: flex; align-items: center; gap: 6px; }",
+    ".td-right-group { display: flex; align-items: center; gap: 6px; }",
+
+    ".td-btn { display: inline-flex; align-items: center; gap: 5px; background: #1a1a22; border: 1px solid #2c2c3a; color: #ffffff; font-weight: 600; font-size: 11px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; }",
+    ".td-btn:hover { background: #262634; border-color: #34d399; color: #ffffff; }",
     ".td-btn:active { transform: scale(0.97); }",
     ".td-btn svg { color: #34d399; }",
     ".td-btn.loading svg { animation: td-spin 1s linear infinite; }",
-    "@keyframes td-spin { 100% { transform: rotate(360deg); } }",
-    ".td-badge { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; }",
+    
+    ".td-badge { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, monospace; white-space: nowrap; }",
+    
     ".td-levels { display: flex; gap: 2px; background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; padding: 2px; }",
     ".td-lvl-btn { border: none; background: transparent; color: #8a8a9e; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; cursor: pointer; font-family: ui-monospace, monospace; }",
     ".td-lvl-btn.active { background: rgba(255,255,255,0.14); color: #ffffff; }",
+    
     ".td-dropdown { position: relative; display: inline-flex; align-items: center; overflow: visible !important; }",
-    ".td-dropdown-btn { display: inline-flex; align-items: center; gap: 4px; background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; color: #ededf0; font-size: 9.5px; font-weight: 600; padding: 2px 6px; cursor: pointer; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease; user-select: none; }",
+    ".td-dropdown-btn { display: inline-flex; align-items: center; gap: 4px; background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; color: #ededf0; font-size: 9.5px; font-weight: 600; padding: 3px 6px; cursor: pointer; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease; user-select: none; }",
     ".td-dropdown-btn:hover { border-color: #34d399; background: #14141a; color: #ffffff; }",
     ".td-dropdown.open .td-dropdown-btn { border-color: #34d399; background: #14141a; box-shadow: 0 0 0 2px rgba(52,211,153,0.18); }",
     ".td-dropdown-arrow { color: #8a8a9e; transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease; }",
@@ -269,19 +297,23 @@
     ".td-dropdown-item.active .td-item-check { display: block; }",
     ".td-item-sub { font-size: 8px; color: #717182; margin-top: 1px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }",
     ".td-dropdown-item.active .td-item-sub { color: #a7f3d0; }",
-    ".td-fidelity { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #8a8a9e; cursor: pointer; user-select: none; margin-left: 2px; }",
+    
+    ".td-fidelity { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #8a8a9e; cursor: pointer; user-select: none; }",
     ".td-fidelity input { margin: 0; cursor: pointer; accent-color: #34d399; }",
+    
     ".td-action { border: none; background: transparent; color: #8a8a9e; font-size: 10px; cursor: pointer; padding: 2px 5px; border-radius: 4px; }",
     ".td-action:hover { color: #ffffff; }",
     ".td-action.undo { color: #34d399; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }",
-    ".td-breakdown { margin-top: 6px; padding: 8px; background: #0a0a0d; border: 1px solid #1e1e26; border-radius: 6px; max-height: 240px; overflow-y: auto; font-size: 10px; }",
+    
+    "/* Inspector Breakdown */",
+    ".td-breakdown { padding: 8px; background: #0a0a0d; border: 1px solid #1e1e26; border-radius: 6px; max-height: 220px; overflow-y: auto; font-size: 10px; }",
     ".td-breakdown-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: #ededf0; margin-bottom: 6px; }",
     ".td-tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e1e26; padding-bottom: 4px; margin-bottom: 6px; }",
     ".td-tab-btn { background: transparent; border: none; color: #8a8a9e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer; }",
     ".td-tab-btn.active { background: rgba(255,255,255,0.12); color: #34d399; }",
     ".td-tab-panel { display: none; }",
     ".td-tab-panel.active { display: block; }",
-    ".td-diff-view { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; padding: 6px; background: #060608; border-radius: 4px; border: 1px solid #181820; max-height: 160px; overflow-y: auto; }",
+    ".td-diff-view { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; padding: 6px; background: #060608; border-radius: 4px; border: 1px solid #181820; max-height: 140px; overflow-y: auto; }",
     ".td-diff-ctx { color: #c0c0d0; }",
     ".td-diff-del { background: rgba(239,68,68,0.22); color: #f87171; text-decoration: line-through; border-radius: 2px; padding: 0 1px; }",
     ".td-diff-add { background: rgba(52,211,153,0.22); color: #34d399; border-radius: 2px; padding: 0 1px; }",
@@ -294,88 +326,104 @@
   ].join("\n");
 
   var lastUndoState = null;
+  var isWritingProgrammatically = false;
 
   function createToolbarElement(targetInput) {
     var host = document.createElement("div");
-    host.id = "token-diet-toolbar-host";
-    host.setAttribute("data-token-diet", "true");
+    host.id = "prompttrim-toolbar-host";
+    host.setAttribute("data-prompttrim", "true");
 
     var shadow = host.attachShadow({ mode: "open" });
     var style = document.createElement("style");
     style.textContent = SHADOW_STYLES;
     shadow.appendChild(style);
 
-    var bar = document.createElement("div");
-    bar.className = "td-bar";
-    bar.innerHTML =
-      '<button class="td-btn" type="button" id="td-compress-btn">' +
+    var wrap = document.createElement("div");
+    wrap.className = "td-host-wrap";
+
+    // 1. Compact Black & White Trigger Button
+    var triggerBtn = document.createElement("button");
+    triggerBtn.className = "td-trigger-btn";
+    triggerBtn.type = "button";
+    triggerBtn.id = "td-trigger-btn";
+    triggerBtn.title = "PromptTrim: Token Diet Compressor";
+    triggerBtn.innerHTML = BW_ICON + '<span class="td-saved-dot" id="td-saved-dot"></span>';
+    wrap.appendChild(triggerBtn);
+
+    // 2. Popover Container with all options
+    var popover = document.createElement("div");
+    popover.className = "td-popover";
+    popover.id = "td-popover";
+    popover.innerHTML =
+      '<div class="td-controls-row">' +
+      '  <div class="td-left-group">' +
+      '    <button class="td-btn" type="button" id="td-compress-btn">' +
       SCISSORS_ICON +
-      '<span>Diet-Token</span>' +
-      '</button>' +
-      '<span class="td-badge" id="td-stat-badge" style="display:none;"></span>' +
-      '<div class="td-levels">' +
-      '<button class="td-lvl-btn" type="button" data-level="0.6" title="Light Compression (60% kept)">L</button>' +
-      '<button class="td-lvl-btn active" type="button" data-level="0.5" title="Balanced Compression (50% kept)">B</button>' +
-      '<button class="td-lvl-btn" type="button" data-level="0.25" title="Aggressive Compression (25% kept)">A</button>' +
+      '      <span>PromptTrim</span>' +
+      '    </button>' +
+      '    <span class="td-badge" id="td-stat-badge" style="display:none;"></span>' +
+      '    <button class="td-action undo" type="button" id="td-undo-btn" style="display:none;">Undo</button>' +
+      '  </div>' +
+      '  <div class="td-right-group">' +
+      '    <div class="td-levels">' +
+      '      <button class="td-lvl-btn" type="button" data-level="0.6" title="Light Compression (60% kept)">L</button>' +
+      '      <button class="td-lvl-btn active" type="button" data-level="0.5" title="Balanced Compression (50% kept)">B</button>' +
+      '      <button class="td-lvl-btn" type="button" data-level="0.25" title="Aggressive Compression (25% kept)">A</button>' +
+      '    </div>' +
+      '    <div class="td-dropdown" id="td-dropdown">' +
+      '      <button class="td-dropdown-btn" type="button" id="td-dropdown-btn" title="Compression Profile">' +
+      '        <span id="td-dropdown-label">Chat</span>' +
+      '        <svg class="td-dropdown-arrow" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+      '      </button>' +
+      '      <div class="td-dropdown-menu" id="td-dropdown-menu">' +
+      '        <div class="td-dropdown-item" data-value="chat-prompt">' +
+      '          <div class="td-item-top"><span class="td-item-title">Chat</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '          <span class="td-item-sub">Conversational filler strip</span>' +
+      '        </div>' +
+      '        <div class="td-dropdown-item" data-value="code-review">' +
+      '          <div class="td-item-top"><span class="td-item-title">Code</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '          <span class="td-item-sub">Paths, lines, hex &amp; syntax</span>' +
+      '        </div>' +
+      '        <div class="td-dropdown-item" data-value="legal-compliance">' +
+      '          <div class="td-item-top"><span class="td-item-title">Legal</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '          <span class="td-item-sub">Clauses, dates &amp; strict terms</span>' +
+      '        </div>' +
+      '        <div class="td-dropdown-item" data-value="rag-context">' +
+      '          <div class="td-item-top"><span class="td-item-title">RAG</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '          <span class="td-item-sub">Aggressive multi-chunk MMR</span>' +
+      '        </div>' +
+      '      </div>' +
+      '    </div>' +
+      '    <label class="td-fidelity" title="Preserve critical instructions and constraints">' +
+      '      <input type="checkbox" id="td-fidelity-toggle" ' + (settings.fidelityMode ? 'checked' : '') + '>' +
+      '      <span>Fidelity</span>' +
+      '    </label>' +
+      '  </div>' +
       '</div>' +
-      '<div class="td-dropdown" id="td-dropdown">' +
-      '<button class="td-dropdown-btn" type="button" id="td-dropdown-btn" title="Compression Profile">' +
-      '<span id="td-dropdown-label">Chat</span>' +
-      '<svg class="td-dropdown-arrow" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
-      '</button>' +
-      '<div class="td-dropdown-menu" id="td-dropdown-menu">' +
-      '<div class="td-dropdown-item" data-value="chat-prompt">' +
-      '<div class="td-item-top"><span class="td-item-title">Chat</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
-      '<span class="td-item-sub">Conversational filler strip</span>' +
-      '</div>' +
-      '<div class="td-dropdown-item" data-value="code-review">' +
-      '<div class="td-item-top"><span class="td-item-title">Code</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
-      '<span class="td-item-sub">Paths, lines, hex &amp; syntax</span>' +
-      '</div>' +
-      '<div class="td-dropdown-item" data-value="legal-compliance">' +
-      '<div class="td-item-top"><span class="td-item-title">Legal</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
-      '<span class="td-item-sub">Clauses, dates &amp; strict terms</span>' +
-      '</div>' +
-      '<div class="td-dropdown-item" data-value="rag-context">' +
-      '<div class="td-item-top"><span class="td-item-title">RAG</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
-      '<span class="td-item-sub">Aggressive multi-chunk MMR</span>' +
-      '</div>' +
-      '</div>' +
-      '</div>' +
-      '<label class="td-fidelity">' +
-      '<input type="checkbox" id="td-fidelity-toggle" ' + (settings.fidelityMode ? 'checked' : '') + '>' +
-      '<span>Fidelity</span>' +
-      '</label>' +
-      '<button class="td-action undo" type="button" id="td-undo-btn" style="display:none;">Undo</button>';
-
-    shadow.appendChild(bar);
-
-    // Tabbed breakdown panel
-    var breakdown = document.createElement("div");
-    breakdown.className = "td-breakdown";
-    breakdown.id = "td-breakdown";
-    breakdown.style.display = "none";
-    breakdown.innerHTML =
-      '<div class="td-breakdown-header">' +
-      '<span>Compression Inspector</span>' +
-      '<div class="td-tabs">' +
-      '<button class="td-tab-btn active" type="button" data-tab="diff">Diff</button>' +
-      '<button class="td-tab-btn" type="button" data-tab="kept">Kept</button>' +
-      '<button class="td-tab-btn" type="button" data-tab="dropped">Dropped</button>' +
-      '</div>' +
-      '</div>' +
-      '<div class="td-tab-panel active" id="td-panel-diff">' +
-      '<div class="td-diff-view" id="td-diff-content"></div>' +
-      '</div>' +
-      '<div class="td-tab-panel" id="td-panel-kept">' +
-      '<div id="td-kept-list" class="td-breakdown-list"></div>' +
-      '</div>' +
-      '<div class="td-tab-panel" id="td-panel-dropped">' +
-      '<div id="td-dropped-list" class="td-breakdown-list"></div>' +
+      '<div class="td-breakdown" id="td-breakdown" style="display:none;">' +
+      '  <div class="td-breakdown-header">' +
+      '    <span>Compression Inspector</span>' +
+      '    <div class="td-tabs">' +
+      '      <button class="td-tab-btn active" type="button" data-tab="diff">Diff</button>' +
+      '      <button class="td-tab-btn" type="button" data-tab="kept">Kept</button>' +
+      '      <button class="td-tab-btn" type="button" data-tab="dropped">Dropped</button>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="td-tab-panel active" id="td-panel-diff">' +
+      '    <div class="td-diff-view" id="td-diff-content"></div>' +
+      '  </div>' +
+      '  <div class="td-tab-panel" id="td-panel-kept">' +
+      '    <div id="td-kept-list" class="td-breakdown-list"></div>' +
+      '  </div>' +
+      '  <div class="td-tab-panel" id="td-panel-dropped">' +
+      '    <div id="td-dropped-list" class="td-breakdown-list"></div>' +
+      '  </div>' +
       '</div>';
-    shadow.appendChild(breakdown);
 
-    // Tab switching
+    wrap.appendChild(popover);
+    shadow.appendChild(wrap);
+
+    // Tab switching inside breakdown panel
     shadow.querySelectorAll(".td-tab-btn").forEach(function (tabBtn) {
       tabBtn.addEventListener("click", function (e) {
         e.preventDefault();
@@ -401,7 +449,31 @@
     var statBadge = shadow.getElementById("td-stat-badge");
     var undoBtn = shadow.getElementById("td-undo-btn");
     var fidelityToggle = shadow.getElementById("td-fidelity-toggle");
+    var breakdown = shadow.getElementById("td-breakdown");
     
+    // Toggle popover on trigger button click
+    function togglePopover(forceState) {
+      var isCurrentlyOpen = popover.classList.contains("open");
+      var willOpen = forceState != null ? forceState : !isCurrentlyOpen;
+      if (willOpen) {
+        popover.classList.add("open");
+        triggerBtn.classList.add("open");
+      } else {
+        popover.classList.remove("open");
+        triggerBtn.classList.remove("open");
+        if (dropdown) {
+          dropdown.classList.remove("open");
+          dropdownMenu.style.display = "none";
+        }
+      }
+    }
+
+    triggerBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePopover();
+    });
+
     // Custom Profile Dropdown Logic
     var dropdown = shadow.getElementById("td-dropdown");
     var dropdownBtn = shadow.getElementById("td-dropdown-btn");
@@ -453,15 +525,15 @@
       });
     });
 
-    // Close dropdown on outside click
+    // Close popover / dropdown on outside click
     document.addEventListener("click", function (e) {
-      if (dropdown && !dropdown.contains(e.target) && e.target !== host) {
-        dropdown.classList.remove("open");
-        dropdownMenu.style.display = "none";
+      if (!host.contains(e.target)) {
+        togglePopover(false);
       }
     });
+
     shadow.addEventListener("click", function (e) {
-      if (dropdown && !dropdown.contains(e.target)) {
+      if (dropdown && !dropdown.contains(e.target) && e.target !== dropdownBtn) {
         dropdown.classList.remove("open");
         dropdownMenu.style.display = "none";
       }
@@ -470,7 +542,7 @@
     fidelityToggle.addEventListener("change", function (e) {
       settings.fidelityMode = e.target.checked;
       chrome.storage.local.set({ fidelityMode: settings.fidelityMode });
-      if (!settings.fidelityMode) {
+      if (!settings.fidelityMode && breakdown) {
         breakdown.style.display = "none";
       }
     });
@@ -488,11 +560,16 @@
       e.stopPropagation();
       var input = findTextBox();
       if (!input || !lastUndoState) return;
-      writeTextToField(input, lastUndoState.text);
+      
+      var targetText = lastUndoState.text;
       lastUndoState = null;
+      
+      writeTextToField(input, targetText);
+
       undoBtn.style.display = "none";
       statBadge.style.display = "none";
-      breakdown.style.display = "none";
+      if (breakdown) breakdown.style.display = "none";
+      triggerBtn.classList.remove("has-savings");
     });
 
     shadow.querySelectorAll(".td-lvl-btn").forEach(function (lvlBtn) {
@@ -522,32 +599,75 @@
     return element.innerText || element.textContent || "";
   }
 
+  /**
+   * Fast, non-blocking text setter for Textarea and ContentEditable elements.
+   * Avoids execCommand locks, excessive spellcheck thrashing, and event cascades.
+   */
   function writeTextToField(element, text) {
     if (!element) return;
-    element.focus();
+    if (isWritingProgrammatically) return;
+    isWritingProgrammatically = true;
 
-    if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
-      var proto = element.tagName === "TEXTAREA"
-        ? HTMLTextAreaElement.prototype
-        : HTMLInputElement.prototype;
-      var setter = Object.getOwnPropertyDescriptor(proto, "value");
-      if (setter && setter.set) {
-        setter.set.call(element, text);
-      } else {
-        element.value = text;
-      }
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      element.dispatchEvent(new Event("change", { bubbles: true }));
-    } else if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-      var sel = window.getSelection();
-      var range = document.createRange();
-      range.selectNodeContents(element);
-      sel.removeAllRanges();
-      sel.addRange(range);
+    try {
+      element.focus();
 
-      var success = document.execCommand("insertText", false, text);
-      if (!success) {
-        element.innerText = text;
+      if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
+        var proto = element.tagName === "TEXTAREA"
+          ? HTMLTextAreaElement.prototype
+          : HTMLInputElement.prototype;
+        var setter = Object.getOwnPropertyDescriptor(proto, "value");
+        if (setter && setter.set) {
+          setter.set.call(element, text);
+        } else {
+          element.value = text;
+        }
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      } else if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+        // Handle Rich ContentEditable (Gemini Quill, Claude ProseMirror, ChatGPT Lexical)
+        var sel = window.getSelection();
+        if (sel) {
+          var range = document.createRange();
+          range.selectNodeContents(element);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+        var handled = false;
+        try {
+          // Attempt modern DataTransfer input event first (ProseMirror / Lexical native)
+          if (typeof DataTransfer !== "undefined") {
+            var dt = new DataTransfer();
+            dt.setData("text/plain", text);
+            var ev = new InputEvent("beforeinput", {
+              inputType: "insertReplacementText",
+              dataTransfer: dt,
+              data: text,
+              bubbles: true,
+              cancelable: true,
+              composed: true
+            });
+            var dispatched = element.dispatchEvent(ev);
+            if (!dispatched) {
+              handled = true;
+            }
+          }
+        } catch (e) {
+          handled = false;
+        }
+
+        if (!handled) {
+          // Quick direct text replacement without blocking UI thread
+          try {
+            var execOk = document.execCommand("insertText", false, text);
+            if (!execOk) {
+              element.textContent = text;
+            }
+          } catch (err) {
+            element.textContent = text;
+          }
+        }
+
         element.dispatchEvent(new InputEvent("input", {
           inputType: "insertText",
           data: text,
@@ -556,12 +676,15 @@
           composed: true
         }));
       }
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      element.dispatchEvent(new Event("change", { bubbles: true }));
+    } finally {
+      setTimeout(function () {
+        isWritingProgrammatically = false;
+      }, 50);
     }
   }
 
   function handleCompress(inputElement, shadow) {
+    var triggerBtn = shadow ? shadow.getElementById("td-trigger-btn") : null;
     var compressBtn = shadow ? shadow.getElementById("td-compress-btn") : null;
     var statBadge = shadow ? shadow.getElementById("td-stat-badge") : null;
     var undoBtn = shadow ? shadow.getElementById("td-undo-btn") : null;
@@ -583,6 +706,9 @@
     if (compressBtn) {
       compressBtn.classList.add("loading");
     }
+    if (triggerBtn) {
+      triggerBtn.classList.add("loading");
+    }
 
     compressTextAsync(
       rawText,
@@ -597,6 +723,9 @@
         if (compressBtn) {
           compressBtn.classList.remove("loading");
         }
+        if (triggerBtn) {
+          triggerBtn.classList.remove("loading");
+        }
 
         if (!res.compressed || res.tokensSaved <= 0) {
           if (statBadge) {
@@ -609,6 +738,10 @@
 
         lastUndoState = { text: rawText, element: inputElement };
         writeTextToField(inputElement, res.compressed);
+
+        if (triggerBtn) {
+          triggerBtn.classList.add("has-savings");
+        }
 
         if (statBadge) {
           var pct = Math.round(res.compressionRatio * 100);
@@ -654,14 +787,16 @@
   /* 5. Active In-Page Injection Loop & MutationObserver                */
   /* ------------------------------------------------------------------ */
   function ensureToolbarInjected() {
+    if (isWritingProgrammatically) return;
+
     var textBox = findTextBox();
     if (!textBox) return;
 
-    var existing = document.getElementById("token-diet-toolbar-host");
+    var existing = document.getElementById("prompttrim-toolbar-host") || document.getElementById("token-diet-toolbar-host");
     var anchor = findAnchor(textBox);
 
     if (existing) {
-      if (anchor && !anchor.parentNode.contains(existing)) {
+      if (anchor && anchor.parentNode && !anchor.parentNode.contains(existing)) {
         anchor.parentNode.insertBefore(existing, anchor);
       }
       return;
@@ -670,7 +805,7 @@
     if (anchor && anchor.parentNode) {
       var toolbar = createToolbarElement(textBox);
       anchor.parentNode.insertBefore(toolbar, anchor);
-      console.log("[Token-Diet] Toolbar mounted above anchor:", anchor);
+      console.log("[PromptTrim] Compact trigger icon mounted above anchor:", anchor);
     }
   }
 
@@ -679,6 +814,7 @@
 
   var debounceTimer = null;
   var observer = new MutationObserver(function () {
+    if (isWritingProgrammatically) return;
     if (debounceTimer) return;
     debounceTimer = setTimeout(function () {
       debounceTimer = null;
@@ -710,7 +846,7 @@
     if (msg.type === "COMPRESS_FOCUSED" || msg.type === "COMPRESS_SELECTION") {
       var input = findTextBox() || document.activeElement;
       if (input) {
-        var toolbar = document.getElementById("token-diet-toolbar-host");
+        var toolbar = document.getElementById("prompttrim-toolbar-host") || document.getElementById("token-diet-toolbar-host");
         var shadow = toolbar ? toolbar.shadowRoot : null;
         handleCompress(input, shadow);
       }
