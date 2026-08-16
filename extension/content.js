@@ -250,8 +250,24 @@
     ".td-levels { display: flex; gap: 2px; background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; padding: 2px; }",
     ".td-lvl-btn { border: none; background: transparent; color: #8a8a9e; font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 4px; cursor: pointer; font-family: ui-monospace, monospace; }",
     ".td-lvl-btn.active { background: rgba(255,255,255,0.14); color: #ffffff; }",
-    ".td-profile-select { background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; color: #ededf0; font-size: 9px; font-weight: 600; padding: 2px 4px; cursor: pointer; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }",
-    ".td-profile-select:hover { border-color: #34d399; }",
+    ".td-dropdown { position: relative; display: inline-flex; align-items: center; }",
+    ".td-dropdown-btn { display: inline-flex; align-items: center; gap: 4px; background: #08080a; border: 1px solid #1e1e26; border-radius: 6px; color: #ededf0; font-size: 9.5px; font-weight: 600; padding: 2px 6px; cursor: pointer; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease; user-select: none; }",
+    ".td-dropdown-btn:hover { border-color: #34d399; background: #14141a; color: #ffffff; }",
+    ".td-dropdown.open .td-dropdown-btn { border-color: #34d399; background: #14141a; box-shadow: 0 0 0 2px rgba(52,211,153,0.18); }",
+    ".td-dropdown-arrow { color: #8a8a9e; transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease; }",
+    ".td-dropdown.open .td-dropdown-arrow { transform: rotate(180deg); color: #34d399; }",
+    ".td-dropdown-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 154px; background: #0e0e13; border: 1px solid #282836; border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05); padding: 4px; z-index: 1000000; display: none; flex-direction: column; gap: 2px; backdrop-filter: blur(12px); animation: td-dropdown-pop 0.15s cubic-bezier(0.16, 1, 0.3, 1); }",
+    "@keyframes td-dropdown-pop { from { opacity: 0; transform: translateY(4px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }",
+    ".td-dropdown-item { display: flex; flex-direction: column; padding: 5px 8px; border-radius: 6px; cursor: pointer; transition: background 0.12s ease; background: transparent; user-select: none; }",
+    ".td-dropdown-item:hover { background: rgba(255,255,255,0.08); }",
+    ".td-dropdown-item.active { background: rgba(52,211,153,0.14); }",
+    ".td-item-top { display: flex; align-items: center; justify-content: space-between; }",
+    ".td-item-title { font-size: 10px; font-weight: 600; color: #ededf0; }",
+    ".td-dropdown-item.active .td-item-title { color: #34d399; }",
+    ".td-item-check { color: #34d399; display: none; }",
+    ".td-dropdown-item.active .td-item-check { display: block; }",
+    ".td-item-sub { font-size: 8px; color: #717182; margin-top: 1px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }",
+    ".td-dropdown-item.active .td-item-sub { color: #a7f3d0; }",
     ".td-fidelity { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #8a8a9e; cursor: pointer; user-select: none; margin-left: 2px; }",
     ".td-fidelity input { margin: 0; cursor: pointer; accent-color: #34d399; }",
     ".td-action { border: none; background: transparent; color: #8a8a9e; font-size: 10px; cursor: pointer; padding: 2px 5px; border-radius: 4px; }",
@@ -301,12 +317,30 @@
       '<button class="td-lvl-btn active" type="button" data-level="0.5" title="Balanced Compression (50% kept)">B</button>' +
       '<button class="td-lvl-btn" type="button" data-level="0.25" title="Aggressive Compression (25% kept)">A</button>' +
       '</div>' +
-      '<select class="td-profile-select" id="td-profile-select" title="Compression Profile">' +
-      '<option value="chat-prompt">Chat</option>' +
-      '<option value="code-review">Code</option>' +
-      '<option value="legal-compliance">Legal</option>' +
-      '<option value="rag-context">RAG</option>' +
-      '</select>' +
+      '<div class="td-dropdown" id="td-dropdown">' +
+      '<button class="td-dropdown-btn" type="button" id="td-dropdown-btn" title="Compression Profile">' +
+      '<span id="td-dropdown-label">Chat</span>' +
+      '<svg class="td-dropdown-arrow" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+      '</button>' +
+      '<div class="td-dropdown-menu" id="td-dropdown-menu">' +
+      '<div class="td-dropdown-item" data-value="chat-prompt">' +
+      '<div class="td-item-top"><span class="td-item-title">Chat</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '<span class="td-item-sub">Conversational filler strip</span>' +
+      '</div>' +
+      '<div class="td-dropdown-item" data-value="code-review">' +
+      '<div class="td-item-top"><span class="td-item-title">Code</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '<span class="td-item-sub">Paths, lines, hex &amp; syntax</span>' +
+      '</div>' +
+      '<div class="td-dropdown-item" data-value="legal-compliance">' +
+      '<div class="td-item-top"><span class="td-item-title">Legal</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '<span class="td-item-sub">Clauses, dates &amp; strict terms</span>' +
+      '</div>' +
+      '<div class="td-dropdown-item" data-value="rag-context">' +
+      '<div class="td-item-top"><span class="td-item-title">RAG</span><svg class="td-item-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' +
+      '<span class="td-item-sub">Aggressive multi-chunk MMR</span>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
       '<label class="td-fidelity">' +
       '<input type="checkbox" id="td-fidelity-toggle" ' + (settings.fidelityMode ? 'checked' : '') + '>' +
       '<span>Fidelity</span>' +
@@ -356,7 +390,7 @@
     });
 
     // Prevent clicking buttons from stealing focus or submitting forms
-    shadow.querySelectorAll("button, input, select").forEach(function (el) {
+    shadow.querySelectorAll("button, input").forEach(function (el) {
       el.addEventListener("mousedown", function (e) {
         e.stopPropagation();
       });
@@ -366,15 +400,71 @@
     var statBadge = shadow.getElementById("td-stat-badge");
     var undoBtn = shadow.getElementById("td-undo-btn");
     var fidelityToggle = shadow.getElementById("td-fidelity-toggle");
-    var profileSelect = shadow.getElementById("td-profile-select");
+    
+    // Custom Profile Dropdown Logic
+    var dropdown = shadow.getElementById("td-dropdown");
+    var dropdownBtn = shadow.getElementById("td-dropdown-btn");
+    var dropdownMenu = shadow.getElementById("td-dropdown-menu");
+    var dropdownLabel = shadow.getElementById("td-dropdown-label");
+    var dropdownItems = shadow.querySelectorAll(".td-dropdown-item");
 
-    if (profileSelect) {
-      profileSelect.value = settings.profile;
-      profileSelect.addEventListener("change", function (e) {
-        settings.profile = e.target.value;
-        chrome.storage.local.set({ profile: settings.profile });
+    var profileLabels = {
+      "chat-prompt": "Chat",
+      "code-review": "Code",
+      "legal-compliance": "Legal",
+      "rag-context": "RAG"
+    };
+
+    function updateProfileUI(val) {
+      settings.profile = val;
+      if (dropdownLabel) {
+        dropdownLabel.textContent = profileLabels[val] || "Chat";
+      }
+      dropdownItems.forEach(function (item) {
+        item.classList.toggle("active", item.getAttribute("data-value") === val);
       });
     }
+
+    updateProfileUI(settings.profile || "chat-prompt");
+
+    dropdownBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var isOpen = dropdown.classList.contains("open");
+      if (isOpen) {
+        dropdown.classList.remove("open");
+        dropdownMenu.style.display = "none";
+      } else {
+        dropdown.classList.add("open");
+        dropdownMenu.style.display = "flex";
+      }
+    });
+
+    dropdownItems.forEach(function (item) {
+      item.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var val = item.getAttribute("data-value");
+        updateProfileUI(val);
+        chrome.storage.local.set({ profile: settings.profile });
+        dropdown.classList.remove("open");
+        dropdownMenu.style.display = "none";
+      });
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener("click", function (e) {
+      if (dropdown && !dropdown.contains(e.target) && e.target !== host) {
+        dropdown.classList.remove("open");
+        dropdownMenu.style.display = "none";
+      }
+    });
+    shadow.addEventListener("click", function (e) {
+      if (dropdown && !dropdown.contains(e.target)) {
+        dropdown.classList.remove("open");
+        dropdownMenu.style.display = "none";
+      }
+    });
 
     fidelityToggle.addEventListener("change", function (e) {
       settings.fidelityMode = e.target.checked;
