@@ -596,6 +596,8 @@
     base.compressedTokens = compressedTokens;
     base.tokensSaved = tokensSaved;
     base.compressionRatio = ratio;
+    base.reductionPercent = Math.round(ratio * 100);
+    base.reductionPercentage = Math.round(ratio * 100);
     base.costSaved = (tokensSaved / 1e6) * costPerMillion;
     base.latencyMs = nowSince(start);
     base.latencyDropMs = Math.round(tokensSaved * msPerToken);
