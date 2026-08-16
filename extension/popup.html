@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Token-Diet Compressor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo-tile">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>
+        </div>
+        <div class="header-text">
+            <div class="header-title">Token-Diet</div>
+            <div class="header-sub">Dynamic Context Compressor</div>
+        </div>
+        <span class="pill">Local CPU</span>
+    </header>
+
+    <div class="hero">
+        <div class="hero-main">
+            <div class="hero-ratio mono" id="hero-ratio">—</div>
+            <div class="hero-label">Token Reduction</div>
+        </div>
+        <div class="hero-side">
+            <svg class="donut" viewBox="0 0 64 64">
+                <circle class="donut-track" cx="32" cy="32" r="24"></circle>
+                <circle class="donut-fill" id="donut-fill" cx="32" cy="32" r="24"></circle>
+            </svg>
+            <div class="donut-center mono" id="donut-center">—</div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><div class="stat-label">Tokens</div><div class="stat-value mono" id="stat-tokens">—</div></div>
+        <div class="stat"><div class="stat-label">Latency Drop</div><div class="stat-value mono emerald" id="stat-latency">—</div></div>
+        <div class="stat"><div class="stat-label">Cost Saved</div><div class="stat-value mono" id="stat-cost">—</div></div>
+    </div>
+
+    <div class="card">
+        <div class="row">
+            <span class="label">Level</span>
+            <div class="segmented" id="segmented">
+                <button class="seg" data-keep="0.6">L</button>
+                <button class="seg active" data-keep="0.4">B</button>
+                <button class="seg" data-keep="0.25">A</button>
+            </div>
+        </div>
+        <div class="row">
+            <span class="label">Query</span>
+            <input type="text" id="input-query" class="input mono" placeholder="optional relevance query" spellcheck="false">
+        </div>
+        <textarea id="input-text" class="input textarea mono" rows="3" placeholder="Paste long context here..."></textarea>
+        <button class="btn" id="btn-compress">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>
+            <span>Compress</span>
+        </button>
+    </div>
+
+    <div class="card result-card" id="result-card" hidden>
+        <div class="result-text mono" id="result-text"></div>
+        <div class="result-row">
+            <button class="ghost" id="btn-copy">Copy</button>
+            <span class="mono result-meta" id="result-meta">—</span>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <span class="mono">Tip: ✂ appears inside any focused text box — compress &amp; undo in place</span>
+        <span class="mono muted">v1.2.0</span>
+    </footer>
+
+    <div class="toast" id="toast" hidden><span id="toast-msg"></span></div>
+
+    <script src="engine.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

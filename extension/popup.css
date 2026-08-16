@@ -1,0 +1,242 @@
+/* ============================================================
+   Token-Diet popup — compact stats panel.
+   Same design tokens as the main dashboard: #08080A canvas,
+   #121216 cards, #1E1E26 borders, emerald accents.
+   ============================================================ */
+
+:root {
+  --bg: #08080a;
+  --card: #121216;
+  --border: #1e1e26;
+  --border-strong: #2a2a36;
+  --text: #ededf0;
+  --muted: #8a8a9e;
+  --emerald: #34d399;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 300px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+.muted { color: var(--muted); }
+.emerald { color: var(--emerald); }
+
+/* ---------- Header ---------- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(8, 8, 10, 0.92);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.logo-tile {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.header-text { flex: 1; min-width: 0; }
+.header-title { font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em; }
+.header-sub { font-size: 9.5px; color: var(--muted); }
+
+.pill {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--emerald);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  white-space: nowrap;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 4px;
+}
+.hero-ratio {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.hero-label { color: var(--muted); font-size: 10px; margin-top: 3px; }
+.hero-side { position: relative; width: 56px; height: 56px; }
+.donut { width: 56px; height: 56px; transform: rotate(-90deg); }
+.donut-track { fill: none; stroke: #2a2a36; stroke-width: 8; }
+.donut-fill {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 150.8 150.8;
+  transition: stroke-dashoffset 0.4s ease;
+}
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* ---------- Stats ---------- */
+.stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 8px 14px 0; }
+.stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.stat-label { color: var(--muted); font-size: 9px; }
+.stat-value { font-size: 13px; font-weight: 600; margin-top: 3px; }
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 10px 14px 0;
+  padding: 12px;
+}
+.row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.label { color: var(--muted); font-size: 10px; width: 38px; flex-shrink: 0; }
+
+.segmented {
+  display: flex;
+  gap: 3px;
+  background: #0a0a0d;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+.seg {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: 600 10px 'JetBrains Mono', monospace;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.seg:hover { color: var(--text); }
+.seg.active { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+.input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--text);
+  font-size: 10.5px;
+  outline: none;
+  resize: vertical;
+}
+.input::placeholder { color: #56566a; }
+.input:focus { border-color: rgba(255, 255, 255, 0.3); }
+.textarea { line-height: 1.6; }
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 0;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 8px;
+  font: 700 11px 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.btn:hover { background: #e5e5ea; }
+.btn:active { transform: scale(0.98); }
+
+/* ---------- Result ---------- */
+.result-card { border-color: rgba(52, 211, 153, 0.3); }
+.result-text {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #6ee7b7;
+  max-height: 110px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.result-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 5px 14px;
+  font: 600 10px 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+}
+.ghost:hover { background: rgba(255, 255, 255, 0.14); }
+.result-meta { color: var(--emerald); font-size: 9.5px; }
+
+/* ---------- Footer ---------- */
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px 12px;
+  color: var(--text);
+  font-size: 9.5px;
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 10.5px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+  z-index: 20;
+  white-space: nowrap;
+}
