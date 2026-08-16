@@ -15,7 +15,7 @@
   "use strict";
 
   /* ------------------------------------------------------------------ */
-  /* 1. PROVIDERS Selector Configuration (Chatbots Only)                */
+  /* 1. PROVIDERS Selector Configuration (All Major AI Chatbots)       */
   /* ------------------------------------------------------------------ */
   var PROVIDERS = {
     chatgpt: {
@@ -29,7 +29,7 @@
     },
     claude: {
       name: "Claude",
-      domains: ["claude.ai"],
+      domains: ["claude.ai", "anthropic.com"],
       selectors: {
         input: 'div[contenteditable="true"][role="textbox"], div.ProseMirror[contenteditable="true"], div[contenteditable="true"]',
         anchor: 'div[aria-label="Message Claude"], fieldset, form, div[class*="composer"]',
@@ -45,6 +45,15 @@
         sendButton: 'button.send-button, button[aria-label="Send message"]'
       }
     },
+    aistudio: {
+      name: "Google AI Studio",
+      domains: ["aistudio.google.com"],
+      selectors: {
+        input: 'textarea.ms-TextArea-field, textarea, div[contenteditable="true"]',
+        anchor: '.prompt-box, .chat-input, form, div.editor-container',
+        sendButton: 'button[aria-label="Run"], button.run-button'
+      }
+    },
     deepseek: {
       name: "DeepSeek",
       domains: ["deepseek.com"],
@@ -58,17 +67,17 @@
       name: "Perplexity",
       domains: ["perplexity.ai"],
       selectors: {
-        input: 'textarea[placeholder*="Ask"], textarea',
-        anchor: 'div[class*="bottom-0"], form',
+        input: 'textarea[placeholder*="Ask"], textarea[placeholder*="Search"], textarea',
+        anchor: 'div[class*="bottom-0"], div[class*="search-bar"], form',
         sendButton: 'button[aria-label="Submit"]'
       }
     },
     copilot: {
       name: "Copilot",
-      domains: ["copilot.microsoft.com"],
+      domains: ["copilot.microsoft.com", "bing.com"],
       selectors: {
-        input: 'textarea#userInput, textarea[placeholder*="Message"], textarea',
-        anchor: 'form, div[class*="input-container"]',
+        input: 'textarea#userInput, textarea[placeholder*="Message"], textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="input-container"], .cib-serp-main',
         sendButton: 'button[aria-label="Submit"], button[title="Submit"]'
       }
     },
@@ -85,46 +94,150 @@
       name: "Mistral",
       domains: ["mistral.ai"],
       selectors: {
-        input: 'textarea[placeholder*="Ask"], textarea',
+        input: 'textarea[placeholder*="Ask"], textarea, div[contenteditable="true"]',
         anchor: 'form, div[class*="chat-input"]',
         sendButton: 'button[type="submit"]'
       }
     },
     huggingchat: {
       name: "HuggingChat",
-      domains: ["huggingface.co/chat", "hf.co/chat"],
+      domains: ["huggingface.co", "hf.co"],
       selectors: {
         input: 'textarea[placeholder*="Ask anything"], textarea',
         anchor: 'form, div[class*="input-container"]',
         sendButton: 'button[type="submit"]'
       }
     },
-    localhost: {
-      name: "Localhost Demo",
-      domains: ["localhost", "127.0.0.1"],
+    grok: {
+      name: "Grok",
+      domains: ["grok.com", "x.ai", "x.com"],
       selectors: {
-        input: '#demo-prompt, textarea#input-text, textarea.input, textarea',
-        anchor: '.chat-input-wrapper, form, div.card',
+        input: 'textarea[placeholder*="Ask"], textarea[placeholder*="Grok"], div[contenteditable="true"][data-testid*="grok"], textarea',
+        anchor: 'form, div[class*="composer"], div[data-testid*="grok"], div[class*="r-1awozwy"]',
+        sendButton: 'button[data-testid*="send"], button[aria-label*="Grok"]'
+      }
+    },
+    meta_ai: {
+      name: "Meta AI",
+      domains: ["meta.ai"],
+      selectors: {
+        input: 'textarea[placeholder*="Ask"], div[contenteditable="true"][role="textbox"], textarea',
+        anchor: 'form, div[class*="composer"], div[role="region"]',
+        sendButton: 'button[aria-label*="Send"], button[type="submit"]'
+      }
+    },
+    v0: {
+      name: "v0 by Vercel",
+      domains: ["v0.dev"],
+      selectors: {
+        input: 'textarea[placeholder*="Ask v0"], textarea[placeholder*="What can I build"], textarea',
+        anchor: 'form, div[class*="relative"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    bolt: {
+      name: "Bolt.new",
+      domains: ["bolt.new"],
+      selectors: {
+        input: 'textarea[placeholder*="Bolt"], textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="chat-input"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    lovable: {
+      name: "Lovable",
+      domains: ["lovable.dev"],
+      selectors: {
+        input: 'textarea[placeholder*="Ask Lovable"], textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="prompt-box"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    phind: {
+      name: "Phind",
+      domains: ["phind.com"],
+      selectors: {
+        input: 'textarea[placeholder*="Search"], textarea',
+        anchor: 'form, div[class*="search-bar"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    you: {
+      name: "You.com",
+      domains: ["you.com"],
+      selectors: {
+        input: 'textarea[placeholder*="Ask"], textarea',
+        anchor: 'form, div[class*="search-container"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    kimi: {
+      name: "Kimi",
+      domains: ["kimi.moonshot.cn", "kimi.ai"],
+      selectors: {
+        input: 'div[contenteditable="true"], textarea',
+        anchor: 'div[class*="input-box"], form',
+        sendButton: 'button[class*="send"]'
+      }
+    },
+    qwen: {
+      name: "Qwen",
+      domains: ["qwenlm.ai", "tongyi.aliyun.com"],
+      selectors: {
+        input: 'textarea, div[contenteditable="true"]',
+        anchor: 'div[class*="input"], form',
+        sendButton: 'button[class*="send"]'
+      }
+    },
+    character_ai: {
+      name: "Character.ai",
+      domains: ["character.ai"],
+      selectors: {
+        input: 'textarea[placeholder*="Message"], textarea, div[contenteditable="true"]',
+        anchor: 'form, div[class*="chat-input"]',
+        sendButton: 'button[aria-label="Send"]'
+      }
+    },
+    github_copilot: {
+      name: "GitHub Copilot",
+      domains: ["github.com"],
+      selectors: {
+        input: 'textarea[placeholder*="Ask Copilot"], textarea#copilot-chat-textarea, textarea',
+        anchor: 'form, div[class*="copilot-chat"]',
+        sendButton: 'button[type="submit"]'
+      }
+    },
+    openwebui: {
+      name: "Open WebUI / Ollama",
+      domains: ["localhost", "127.0.0.1", "0.0.0.0", "openwebui.com"],
+      selectors: {
+        input: 'textarea#chat-textarea, textarea#prompt-textarea, #demo-prompt, textarea#input-text, textarea.input, textarea, div[contenteditable="true"]',
+        anchor: '#chat-input-container, .chat-input-wrapper, form, div.card',
         sendButton: 'button#btn-send, button.btn'
+      }
+    },
+    universal: {
+      name: "AI Chatbot",
+      domains: [],
+      selectors: {
+        input: 'textarea, div[contenteditable="true"][role="textbox"], div.ProseMirror, div.ql-editor, div[contenteditable="true"]',
+        anchor: 'form, div[class*="composer"], div[class*="input"], div[class*="prompt"], footer, fieldset',
+        sendButton: 'button[type="submit"], button[aria-label*="Send"]'
       }
     }
   };
 
   var hostname = window.location.hostname;
   var currentProvider = Object.keys(PROVIDERS).find(function (k) {
-    return PROVIDERS[k].domains.some(function (d) {
+    return PROVIDERS[k].domains && PROVIDERS[k].domains.some(function (d) {
       return hostname === d || hostname.endsWith("." + d);
     });
-  });
-
-  if (!currentProvider) {
-    return;
-  }
+  }) || "universal";
 
   if (window.__PROMPTTRIM_INLINE__) return;
   window.__PROMPTTRIM_INLINE__ = true;
 
-  console.log("[PromptTrim] Initializing Capsule toolbar on chatbot: " + PROVIDERS[currentProvider].name);
+  console.log("[PromptTrim] Initializing Capsule toolbar on chatbot: " + (PROVIDERS[currentProvider] ? PROVIDERS[currentProvider].name : currentProvider));
 
   var settings = {
     keepFraction: 0.5,
@@ -213,14 +326,21 @@
 
   function findTextBox() {
     var p = PROVIDERS[currentProvider];
-    if (!p) return null;
-    return document.querySelector(p.selectors.input);
+    if (p && p.selectors && p.selectors.input) {
+      var el = document.querySelector(p.selectors.input);
+      if (el) return el;
+    }
+    // Fallback: look for focused or active chat inputs
+    var active = document.activeElement;
+    if (active && (active.tagName === "TEXTAREA" || active.isContentEditable || active.getAttribute("contenteditable") === "true")) {
+      return active;
+    }
+    return document.querySelector('textarea, div[contenteditable="true"][role="textbox"], div.ProseMirror, div.ql-editor, div[contenteditable="true"]');
   }
 
   function findAnchor(textBox) {
     if (!textBox) return null;
     var p = PROVIDERS[currentProvider];
-    if (!p) return null;
 
     if (currentProvider === "gemini") {
       // In Gemini, anchor above the outermost input area container
@@ -230,13 +350,16 @@
       if (chatWindow) return chatWindow;
     }
 
-    var form = textBox.closest("form");
-    if (form) return form;
-
-    if (p.selectors.anchor) {
+    if (p && p.selectors && p.selectors.anchor) {
       var specific = textBox.closest(p.selectors.anchor);
       if (specific) return specific;
     }
+
+    var form = textBox.closest("form");
+    if (form) return form;
+
+    var container = textBox.closest("div[class*='composer'], div[class*='input'], div[class*='prompt'], div[class*='search'], footer, fieldset");
+    if (container) return container;
 
     return textBox.parentElement || textBox;
   }
