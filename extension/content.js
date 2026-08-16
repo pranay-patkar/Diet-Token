@@ -247,80 +247,59 @@
   };
 
   /* ------------------------------------------------------------------ */
-  /* 2. Web Worker Asynchronous Delegation                              */
+  /* 2. Asynchronous Compression Offloading (MV3 Service Worker / Async)*/
   /* ------------------------------------------------------------------ */
-  var workerInstance = null;
-  var workerReqId = 0;
-  var workerCallbacks = {};
+  function compressTextAsync(rawText, query, opts, callback) {
+    var engine = window.PromptTrim || window.TokenDiet;
 
-  function getWorker() {
-    if (!workerInstance && typeof Worker !== "undefined") {
+    // Try offloading via background service worker (isolated MV3 worker, zero CSP conflict)
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+      var responded = false;
       try {
-        var workerUrl = chrome.runtime.getURL("worker.js");
-        workerInstance = new Worker(workerUrl);
-        workerInstance.onmessage = function (e) {
-          var data = e.data;
-          if (data && data.type === "COMPRESS_RESULT" && workerCallbacks[data.id]) {
-            var cb = workerCallbacks[data.id];
-            delete workerCallbacks[data.id];
-            cb(data);
+        chrome.runtime.sendMessage({
+          type: "COMPRESS_OFFLOAD",
+          text: rawText,
+          query: query,
+          opts: opts
+        }, function (response) {
+          if (responded) return;
+          responded = true;
+          if (chrome.runtime.lastError || !response || !response.success || !response.result) {
+            runInPageEngine();
+          } else {
+            callback(response.result);
           }
-        };
-        workerInstance.onerror = function (err) {
-          console.warn("[PromptTrim] Worker error, falling back to main-thread engine:", err);
-          workerInstance = null;
-        };
-      } catch (err) {
-        console.warn("[PromptTrim] Worker unavailable:", err);
-        workerInstance = null;
+        });
+
+        // Safety fallback timer if message passing is delayed
+        setTimeout(function () {
+          if (!responded) {
+            responded = true;
+            runInPageEngine();
+          }
+        }, 1200);
+        return;
+      } catch (e) {
+        // Fall through to in-page engine
       }
     }
-    return workerInstance;
-  }
 
-  function compressTextAsync(rawText, query, opts, callback) {
-    var engine = window.PromptTrim;
-    var worker = getWorker();
-    if (worker) {
-      var reqId = ++workerReqId;
-      var timeout = setTimeout(function () {
-        if (workerCallbacks[reqId]) {
-          delete workerCallbacks[reqId];
-          if (engine && engine.compress) {
+    runInPageEngine();
+
+    function runInPageEngine() {
+      if (engine && engine.compress) {
+        // Run on next tick to prevent any synchronous main thread frame blocking
+        setTimeout(function () {
+          try {
             var res = engine.compress(rawText, query, opts);
             callback(res);
+          } catch (err) {
+            callback({ compressed: rawText, tokensSaved: 0, error: err.message || String(err) });
           }
-        }
-      }, 2500);
-
-      workerCallbacks[reqId] = function (data) {
-        clearTimeout(timeout);
-        if (data.success && data.result) {
-          callback(data.result);
-        } else if (engine && engine.compress) {
-          var res = engine.compress(rawText, query, opts);
-          callback(res);
-        } else {
-          callback({ compressed: rawText, tokensSaved: 0, error: data.error });
-        }
-      };
-
-      worker.postMessage({
-        type: "COMPRESS",
-        id: reqId,
-        text: rawText,
-        query: query,
-        keepFraction: opts.keepFraction,
-        model: opts.model,
-        fidelityMode: opts.fidelityMode,
-        profile: opts.profile,
-        costPerMillion: opts.costPerMillion
-      });
-    } else if (engine && engine.compress) {
-      var res = engine.compress(rawText, query, opts);
-      callback(res);
-    } else {
-      callback({ compressed: rawText, tokensSaved: 0, error: "Engine not loaded" });
+        }, 0);
+      } else {
+        callback({ compressed: rawText, tokensSaved: 0, error: "Engine not loaded" });
+      }
     }
   }
 

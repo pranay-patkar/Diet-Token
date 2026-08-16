@@ -1,9 +1,15 @@
 /**
  * PromptTrim background service worker:
+ *  - offload heavy compression from content script
  *  - right-click context menu on any text selection
  *  - keyboard shortcut (Alt+Shift+T) for the focused text box
- * Both just relay a message to the content script, which owns the UI.
  */
+
+try {
+  importScripts("tokenizer.js", "instruction-detector.js", "diff.js", "engine.js");
+} catch (e) {
+  console.warn("[PromptTrim Background] Could not load engine scripts in service worker:", e);
+}
 
 const MENU_ID = "prompttrim-compress-selection";
 
@@ -15,6 +21,23 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ["selection"]
     });
   });
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request && request.type === "COMPRESS_OFFLOAD") {
+    try {
+      const engine = self.PromptTrim || self.TokenDiet;
+      if (engine && engine.compress) {
+        const res = engine.compress(request.text, request.query, request.opts || {});
+        sendResponse({ success: true, result: res });
+      } else {
+        sendResponse({ success: false, error: "Engine not initialized in background worker" });
+      }
+    } catch (err) {
+      sendResponse({ success: false, error: err.message || String(err) });
+    }
+    return true; // async sendResponse
+  }
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
