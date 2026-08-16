@@ -19,6 +19,7 @@
     statLatency: document.getElementById("stat-latency"),
     statCost: document.getElementById("stat-cost"),
     segs: Array.prototype.slice.call(document.querySelectorAll(".seg")),
+    segProfiles: Array.prototype.slice.call(document.querySelectorAll(".seg-p")),
     query: document.getElementById("input-query"),
     text: document.getElementById("input-text"),
     btnCompress: document.getElementById("btn-compress"),
@@ -34,8 +35,23 @@
 
   /* ---------------- settings ---------------- */
   chrome.storage.local.get(null, function (stored) {
+    if (stored.profile != null) setProfile(stored.profile, false);
     if (stored.keepFraction != null) setKeepFraction(stored.keepFraction, false);
     if (stored.costPerMillion != null) settings.costPerMillion = stored.costPerMillion;
+  });
+
+  function setProfile(profileKey, persist) {
+    settings.profile = profileKey;
+    els.segProfiles.forEach(function (b) {
+      b.classList.toggle("active", b.dataset.profile === profileKey);
+    });
+    if (persist) chrome.storage.local.set({ profile: profileKey });
+  }
+
+  els.segProfiles.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setProfile(btn.dataset.profile, true);
+    });
   });
 
   function setKeepFraction(fraction, persist) {
@@ -69,6 +85,7 @@
     var query = els.query.value.trim();
     var t0 = performance.now();
     var res = engine.compress(text, query, {
+      profile: settings.profile || "chat-prompt",
       keepFraction: settings.keepFraction,
       costPerMillion: settings.costPerMillion
     });
