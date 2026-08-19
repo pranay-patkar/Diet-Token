@@ -7,7 +7,7 @@
  * Universal Fidelity Architecture:
  *   - Direct inline mounting inside/adjacent to composer forms
  *   - Shadow DOM styling isolation
- *   - Fidelity Mode toggle & compression breakdown inspector
+ *   - Fidelity Mode toggle & inline paste confirmation toast
  *   - React native value tracker bypass
  */
 
@@ -416,24 +416,12 @@
     ".td-action:hover { color: #ffffff; }",
     ".td-action.undo { color: #34d399; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }",
     
-    "/* Inspector Breakdown */",
-    ".td-breakdown { padding: 8px; background: #0a0a0d; border: 1px solid #1e1e26; border-radius: 6px; max-height: 220px; overflow-y: auto; font-size: 10px; }",
-    ".td-breakdown-header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: #ededf0; margin-bottom: 6px; }",
-    ".td-tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e1e26; padding-bottom: 4px; margin-bottom: 6px; }",
-    ".td-tab-btn { background: transparent; border: none; color: #8a8a9e; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; cursor: pointer; }",
-    ".td-tab-btn.active { background: rgba(255,255,255,0.12); color: #34d399; }",
-    ".td-tab-panel { display: none; }",
-    ".td-tab-panel.active { display: block; }",
-    ".td-diff-view { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; padding: 6px; background: #060608; border-radius: 4px; border: 1px solid #181820; max-height: 140px; overflow-y: auto; }",
-    ".td-diff-ctx { color: #c0c0d0; }",
-    ".td-diff-del { background: rgba(239,68,68,0.22); color: #f87171; text-decoration: line-through; border-radius: 2px; padding: 0 1px; }",
-    ".td-diff-add { background: rgba(52,211,153,0.22); color: #34d399; border-radius: 2px; padding: 0 1px; }",
-    ".td-breakdown-section { margin-bottom: 6px; }",
-    ".td-breakdown-label { display: block; color: #8a8a9e; margin-bottom: 2px; }",
-    ".td-breakdown-label.td-dropped { color: #ef4444; }",
-    ".td-breakdown-list { display: flex; flex-direction: column; gap: 2px; }",
-    ".td-breakdown-item { padding: 2px 4px; border-radius: 3px; color: #a0a0b0; word-break: break-word; }",
-    ".td-dropped-item { opacity: 0.6; text-decoration: line-through; }"
+    "/* Paste Confirmation Toast */",
+    ".td-toast { position: absolute; top: calc(100% + 6px); left: 0; display: none; align-items: center; gap: 6px; background: #0e0e13; border: 1px solid rgba(52,211,153,0.45); border-radius: 7px; padding: 5px 9px; font-size: 10px; font-weight: 600; color: #a7f3d0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: nowrap; box-shadow: 0 10px 28px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06); z-index: 2147483647; animation: td-toast-in 0.18s cubic-bezier(0.16, 1, 0.3, 1); }",
+    ".td-toast.show { display: inline-flex; }",
+    ".td-toast.fade-out { opacity: 0; transition: opacity 0.3s ease; }",
+    ".td-toast svg { color: #34d399; flex: none; }",
+    "@keyframes td-toast-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }"
   ].join("\n");
 
   var lastUndoState = null;
@@ -511,44 +499,18 @@
       '      <span>Fidelity</span>' +
       '    </label>' +
       '  </div>' +
-      '</div>' +
-      '<div class="td-breakdown" id="td-breakdown" style="display:none;">' +
-      '  <div class="td-breakdown-header">' +
-      '    <span>Compression Inspector</span>' +
-      '    <div class="td-tabs">' +
-      '      <button class="td-tab-btn active" type="button" data-tab="diff">Diff</button>' +
-      '      <button class="td-tab-btn" type="button" data-tab="kept">Kept</button>' +
-      '      <button class="td-tab-btn" type="button" data-tab="dropped">Dropped</button>' +
-      '    </div>' +
-      '  </div>' +
-      '  <div class="td-tab-panel active" id="td-panel-diff">' +
-      '    <div class="td-diff-view" id="td-diff-content"></div>' +
-      '  </div>' +
-      '  <div class="td-tab-panel" id="td-panel-kept">' +
-      '    <div id="td-kept-list" class="td-breakdown-list"></div>' +
-      '  </div>' +
-      '  <div class="td-tab-panel" id="td-panel-dropped">' +
-      '    <div id="td-dropped-list" class="td-breakdown-list"></div>' +
-      '  </div>' +
       '</div>';
 
     wrap.appendChild(popover);
-    shadow.appendChild(wrap);
 
-    // Tab switching inside breakdown panel
-    shadow.querySelectorAll(".td-tab-btn").forEach(function (tabBtn) {
-      tabBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var tab = tabBtn.getAttribute("data-tab");
-        shadow.querySelectorAll(".td-tab-btn").forEach(function (b) {
-          b.classList.toggle("active", b === tabBtn);
-        });
-        shadow.querySelectorAll(".td-tab-panel").forEach(function (p) {
-          p.classList.toggle("active", p.id === "td-panel-" + tab);
-        });
-      });
-    });
+    var toast = document.createElement("div");
+    toast.className = "td-toast";
+    toast.id = "td-toast";
+    toast.innerHTML =
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' +
+      '<span id="td-toast-msg"></span>';
+    wrap.appendChild(toast);
+    shadow.appendChild(wrap);
 
     // Prevent clicking buttons from stealing focus or submitting forms
     shadow.querySelectorAll("button, input").forEach(function (el) {
@@ -561,7 +523,6 @@
     var statBadge = shadow.getElementById("td-stat-badge");
     var undoBtn = shadow.getElementById("td-undo-btn");
     var fidelityToggle = shadow.getElementById("td-fidelity-toggle");
-    var breakdown = shadow.getElementById("td-breakdown");
     
     // Toggle popover on trigger button click
     function togglePopover(forceState) {
@@ -654,9 +615,6 @@
     fidelityToggle.addEventListener("change", function (e) {
       settings.fidelityMode = e.target.checked;
       chrome.storage.local.set({ fidelityMode: settings.fidelityMode });
-      if (!settings.fidelityMode && breakdown) {
-        breakdown.style.display = "none";
-      }
     });
 
     compressBtn.addEventListener("click", function (e) {
@@ -680,7 +638,6 @@
 
       undoBtn.style.display = "none";
       statBadge.style.display = "none";
-      if (breakdown) breakdown.style.display = "none";
       triggerBtn.classList.remove("has-savings");
     });
 
@@ -795,15 +752,47 @@
     }
   }
 
+  function showToast(shadow, message) {
+    if (!shadow) return;
+    var toast = shadow.getElementById("td-toast");
+    var msgEl = shadow.getElementById("td-toast-msg");
+    if (!toast || !msgEl) return;
+    msgEl.textContent = message;
+    toast.classList.remove("fade-out");
+    toast.classList.add("show");
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(function () {
+      toast.classList.add("fade-out");
+      setTimeout(function () {
+        toast.classList.remove("show", "fade-out");
+      }, 300);
+    }, 2800);
+  }
+
+  function flashHighlight(inputElement) {
+    if (!inputElement) return;
+    var prev = {
+      outline: inputElement.style.outline,
+      outlineOffset: inputElement.style.outlineOffset,
+      boxShadow: inputElement.style.boxShadow
+    };
+    inputElement.style.transition = "outline 0.25s ease, box-shadow 0.25s ease";
+    inputElement.style.outline = "2px solid rgba(52,211,153,0.85)";
+    inputElement.style.outlineOffset = "2px";
+    inputElement.style.boxShadow = "0 0 0 4px rgba(52,211,153,0.28)";
+    setTimeout(function () {
+      inputElement.style.outline = prev.outline;
+      inputElement.style.outlineOffset = prev.outlineOffset;
+      inputElement.style.boxShadow = prev.boxShadow;
+      inputElement.style.transition = "";
+    }, 1400);
+  }
+
   function handleCompress(inputElement, shadow) {
     var triggerBtn = shadow ? shadow.getElementById("td-trigger-btn") : null;
     var compressBtn = shadow ? shadow.getElementById("td-compress-btn") : null;
     var statBadge = shadow ? shadow.getElementById("td-stat-badge") : null;
     var undoBtn = shadow ? shadow.getElementById("td-undo-btn") : null;
-    var breakdown = shadow ? shadow.getElementById("td-breakdown") : null;
-    var diffContent = shadow ? shadow.getElementById("td-diff-content") : null;
-    var keptList = shadow ? shadow.getElementById("td-kept-list") : null;
-    var droppedList = shadow ? shadow.getElementById("td-dropped-list") : null;
 
     var rawText = getFieldText(inputElement).trim();
     if (!rawText || rawText.length < 20) {
@@ -865,32 +854,8 @@
           undoBtn.style.display = "inline";
         }
 
-        if (settings.fidelityMode && breakdown) {
-          // Word-level diff
-          if (diffContent && window.Diff && window.Diff.diffWords) {
-            var diff = window.Diff.diffWords(rawText, res.compressed);
-            diffContent.innerHTML = window.Diff.renderDiffHtml(diff);
-          }
-
-          if (keptList) {
-            keptList.innerHTML = (res.keptSentences || []).map(function (s) {
-              var type = window.InstructionDetector ? window.InstructionDetector.detect(s) : null;
-              var icon = type === "critical" ? "🔴" : type === "instruction" ? "🟡" : "🟢";
-              return '<div class="td-breakdown-item">' + icon + ' ' + s.substring(0, 80) + (s.length > 80 ? '...' : '') + '</div>';
-            }).join("");
-          }
-
-          if (droppedList) {
-            var dropped = (res.droppedByScore || []).concat(res.droppedByRedundancy || []);
-            droppedList.innerHTML = dropped.map(function (s) {
-              return '<div class="td-breakdown-item td-dropped-item">' + s.substring(0, 80) + (s.length > 80 ? '...' : '') + '</div>';
-            }).join("");
-          }
-
-          breakdown.style.display = "block";
-        } else if (breakdown) {
-          breakdown.style.display = "none";
-        }
+        flashHighlight(inputElement);
+        showToast(shadow, "Prompt trimmed & pasted -" + Math.round(res.compressionRatio * 100) + "% - " + res.tokensSaved + " tokens");
       }
     );
   }
