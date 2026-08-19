@@ -12,6 +12,7 @@
   var settings = Object.assign({}, engine.DEFAULTS);
 
   var els = {
+    headerHome: document.getElementById("header-home"),
     ratio: document.getElementById("hero-ratio"),
     donutFill: document.getElementById("donut-fill"),
     donutCenter: document.getElementById("donut-center"),
@@ -32,6 +33,14 @@
   };
 
   var toastTimer = null;
+
+  /* ---------------- open website ---------------- */
+  var WEBSITE_URL = "https://pranay-patkar.github.io/Diet-Token/";
+
+  els.headerHome.addEventListener("click", function () {
+    chrome.tabs.create({ url: WEBSITE_URL });
+    window.close();
+  });
 
   /* ---------------- settings ---------------- */
   chrome.storage.local.get(null, function (stored) {
